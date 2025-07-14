@@ -253,7 +253,7 @@ class QSPIFlash(wiring.Component):
             super().__init__({
                 "clk": Out(OutputIOSignature(1)),
                 "csn": Out(OutputIOSignature(1)),
-                "d": Out(BidirIOSignature(4, all_have_oe=True)),
+                "d": Out(BidirIOSignature(4, individual_oe=True)),
             })
 
     def __init__(self, *, addr_width, data_width):

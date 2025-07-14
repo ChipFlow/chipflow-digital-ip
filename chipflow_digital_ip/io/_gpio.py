@@ -17,7 +17,7 @@ class GPIOPeripheral(wiring.Component):
                 raise ValueError(f"Pin pin_count must be lesser than or equal to 32, not {pin_count}")
             self._pin_count = pin_count
             super().__init__({
-                "gpio": Out(BidirIOSignature(pin_count, all_have_oe=True))
+                "gpio": Out(BidirIOSignature(pin_count, individual_oe=True))
                 })
 
         @property
