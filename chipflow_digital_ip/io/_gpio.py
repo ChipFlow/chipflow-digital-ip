@@ -1,10 +1,12 @@
+from typing import Unpack
+
 from amaranth import Module, unsigned
 from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, flipped, connect
 
 from amaranth_soc import csr, gpio
 
-from chipflow_lib.platforms import BidirIOSignature
+from chipflow_lib.platforms import BidirIOSignature, IOModelOptions
 
 __all__ = ["GPIOPeripheral"]
 
@@ -12,12 +14,12 @@ __all__ = ["GPIOPeripheral"]
 class GPIOPeripheral(wiring.Component):
 
     class Signature(wiring.Signature):
-        def __init__(self, pin_count=1):
+        def __init__(self, pin_count=1, **kwargs: Unpack[IOModelOptions]):
             if pin_count > 32:
                 raise ValueError(f"Pin pin_count must be lesser than or equal to 32, not {pin_count}")
             self._pin_count = pin_count
             super().__init__({
-                "gpio": Out(BidirIOSignature(pin_count, individual_oe=True))
+                "gpio": Out(BidirIOSignature(pin_count, individual_oe=True, **kwargs))
                 })
 
         @property
