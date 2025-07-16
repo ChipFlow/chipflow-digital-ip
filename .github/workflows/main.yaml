@@ -76,7 +76,6 @@ jobs:
           cache: true
           cache-dependency-path: './**/pyproject.toml'
 
-
       - name: Install dependencies with multirepo
         uses: chipflow/pdm-multirepo@v1
         with:
@@ -91,7 +90,7 @@ jobs:
         working-directory: ./chipflow-examples/minimal
         run: |
           pdm run chipflow pin lock
-          pdm run chipflow silicon submit --wait $DRY
+          pdm run chipflow -vv silicon submit --wait $DRY
         env:
           CHIPFLOW_API_KEY: ${{ secrets.CHIPFLOW_API_KEY}}
           CHIPFLOW_API_ORIGIN: ${{ env.CHIPFLOW_API_ORIGIN }}
