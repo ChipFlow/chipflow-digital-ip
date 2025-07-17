@@ -9,9 +9,6 @@ from amaranth_soc.memory import MemoryMap
 from pathlib import Path
 
 
-__all__ = ["CV32E40P", "DebugModule", "JTAG"]
-
-
 class _OBISignature(wiring.Signature):
     def __init__(self):
         super().__init__({
@@ -202,7 +199,7 @@ class CV32E40P(wiring.Component):
                 platform.add_file(path.name, f)
         return m
 
-class DebugModule(wiring.Component):
+class OBIDebugModule(wiring.Component):
     def __init__(self):
         self._addr_width=12
 

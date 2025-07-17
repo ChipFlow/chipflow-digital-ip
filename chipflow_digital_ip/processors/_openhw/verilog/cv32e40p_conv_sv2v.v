@@ -115,16 +115,19 @@ module cv32e40p_if_stage (
 	always @(*) begin : EXC_PC_MUX
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (trap_addr_mux_i)
 			cv32e40p_pkg_TRAP_MACHINE: trap_base_addr = m_trap_base_addr_i;
 			cv32e40p_pkg_TRAP_USER: trap_base_addr = u_trap_base_addr_i;
 			default: trap_base_addr = m_trap_base_addr_i;
 		endcase
+		(* full_case, parallel_case *)
 		case (trap_addr_mux_i)
 			cv32e40p_pkg_TRAP_MACHINE: exc_vec_pc_mux = m_exc_vec_pc_mux_i;
 			cv32e40p_pkg_TRAP_USER: exc_vec_pc_mux = u_exc_vec_pc_mux_i;
 			default: exc_vec_pc_mux = m_exc_vec_pc_mux_i;
 		endcase
+		(* full_case, parallel_case *)
 		case (exc_pc_mux_i)
 			cv32e40p_pkg_EXC_PC_EXCEPTION: exc_pc = {trap_base_addr, 8'h00};
 			cv32e40p_pkg_EXC_PC_IRQ: exc_pc = {trap_base_addr, 1'b0, exc_vec_pc_mux, 2'b00};
@@ -146,6 +149,7 @@ module cv32e40p_if_stage (
 		if (_sv2v_0)
 			;
 		branch_addr_n = {boot_addr_i[31:2], 2'b00};
+		(* full_case, parallel_case *)
 		case (pc_mux_i)
 			cv32e40p_pkg_PC_BOOT: branch_addr_n = {boot_addr_i[31:2], 2'b00};
 			cv32e40p_pkg_PC_JUMP: branch_addr_n = jump_target_id_i;
@@ -496,9 +500,9 @@ module cv32e40p_cs_registers (
 	wire [31:0] mhpmcounter_write_increment;
 	assign is_irq = csr_cause_i[5];
 	assign mip = mip_i;
-	function automatic [1:0] sv2v_cast_315CD;
+	function automatic [1:0] sv2v_cast_8FA4C;
 		input reg [1:0] inp;
-		sv2v_cast_315CD = inp;
+		sv2v_cast_8FA4C = inp;
 	endfunction
 	always @(*) begin
 		if (_sv2v_0)
@@ -506,10 +510,10 @@ module cv32e40p_cs_registers (
 		csr_mie_wdata = csr_wdata_i;
 		csr_mie_we = 1'b1;
 		case (csr_op_i)
-			sv2v_cast_315CD(2'b01): csr_mie_wdata = csr_wdata_i;
-			sv2v_cast_315CD(2'b10): csr_mie_wdata = csr_wdata_i | mie_q;
-			sv2v_cast_315CD(2'b11): csr_mie_wdata = ~csr_wdata_i & mie_q;
-			sv2v_cast_315CD(2'b00): begin
+			sv2v_cast_8FA4C(2'b01): csr_mie_wdata = csr_wdata_i;
+			sv2v_cast_8FA4C(2'b10): csr_mie_wdata = csr_wdata_i | mie_q;
+			sv2v_cast_8FA4C(2'b11): csr_mie_wdata = ~csr_wdata_i & mie_q;
+			sv2v_cast_8FA4C(2'b00): begin
 				csr_mie_wdata = csr_wdata_i;
 				csr_mie_we = 1'b0;
 			end
@@ -595,7 +599,7 @@ module cv32e40p_cs_registers (
 					12'hf14: csr_rdata_int = hart_id_i;
 					12'hf11: csr_rdata_int = {cv32e40p_pkg_MVENDORID_BANK, cv32e40p_pkg_MVENDORID_OFFSET};
 					12'hf12: csr_rdata_int = cv32e40p_pkg_MARCHID;
-					12'hf13: csr_rdata_int = ((FPU || COREV_PULP) || COREV_CLUSTER ? 32'h00000001 : 'b0);
+					12'hf13: csr_rdata_int = (((FPU == 1) || (COREV_PULP == 1)) || (COREV_CLUSTER == 1) ? 32'h00000001 : 'b0);
 					12'h343: csr_rdata_int = 'b0;
 					12'h7a0, 12'h7a3, 12'h7a8, 12'h7aa: csr_rdata_int = 'b0;
 					12'h7a1: csr_rdata_int = tmatch_control_rdata;
@@ -752,8 +756,10 @@ module cv32e40p_cs_registers (
 						if (csr_we_int)
 							ucause_n = {csr_wdata_int[31], csr_wdata_int[4:0]};
 				endcase
+				(* full_case, parallel_case *)
 				case (1'b1)
 					csr_save_cause_i: begin
+						(* full_case, parallel_case *)
 						case (1'b1)
 							csr_save_if_i: exception_pc = pc_if_i;
 							csr_save_id_i: exception_pc = pc_id_i;
@@ -761,6 +767,7 @@ module cv32e40p_cs_registers (
 							default:
 								;
 						endcase
+						(* full_case, parallel_case *)
 						case (priv_lvl_q)
 							2'b00:
 								if (~is_irq) begin
@@ -819,6 +826,7 @@ module cv32e40p_cs_registers (
 						mstatus_n[4] = 1'b1;
 					end
 					csr_restore_mret_i:
+						(* full_case, parallel_case *)
 						case (mstatus_q[2-:2])
 							2'b00: begin
 								mstatus_n[6] = mstatus_q[3];
@@ -957,8 +965,10 @@ module cv32e40p_cs_registers (
 							mstatus_fs_n = 2'b11;
 					end
 				end
+				(* full_case, parallel_case *)
 				case (1'b1)
 					csr_save_cause_i: begin
+						(* full_case, parallel_case *)
 						case (1'b1)
 							csr_save_if_i: exception_pc = pc_if_i;
 							csr_save_id_i: exception_pc = pc_id_i;
@@ -999,10 +1009,10 @@ module cv32e40p_cs_registers (
 		csr_wdata_int = csr_wdata_i;
 		csr_we_int = 1'b1;
 		case (csr_op_i)
-			sv2v_cast_315CD(2'b01): csr_wdata_int = csr_wdata_i;
-			sv2v_cast_315CD(2'b10): csr_wdata_int = csr_wdata_i | csr_rdata_o;
-			sv2v_cast_315CD(2'b11): csr_wdata_int = ~csr_wdata_i & csr_rdata_o;
-			sv2v_cast_315CD(2'b00): begin
+			sv2v_cast_8FA4C(2'b01): csr_wdata_int = csr_wdata_i;
+			sv2v_cast_8FA4C(2'b10): csr_wdata_int = csr_wdata_i | csr_rdata_o;
+			sv2v_cast_8FA4C(2'b11): csr_wdata_int = ~csr_wdata_i & csr_rdata_o;
+			sv2v_cast_8FA4C(2'b00): begin
 				csr_wdata_int = csr_wdata_i;
 				csr_we_int = 1'b0;
 			end
@@ -1032,12 +1042,12 @@ module cv32e40p_cs_registers (
 		if (PULP_SECURE == 1) begin : gen_pmp_user
 			for (_gv_j_1 = 0; _gv_j_1 < N_PMP_ENTRIES; _gv_j_1 = _gv_j_1 + 1) begin : CS_PMP_CFG
 				localparam j = _gv_j_1;
-				wire [8:1] sv2v_tmp_C98C8;
-				assign sv2v_tmp_C98C8 = pmp_reg_n[128 + (((j / 4) * 32) + (((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (8 * ((j % 4) + 1)) - 1 : (((8 * ((j % 4) + 1)) - 1) + (((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1)) - 1))-:(((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1)];
-				always @(*) pmp_reg_n[0 + (j * 8)+:8] = sv2v_tmp_C98C8;
-				wire [(((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1) * 1:1] sv2v_tmp_864C8;
-				assign sv2v_tmp_864C8 = pmp_reg_q[0 + (j * 8)+:8];
-				always @(*) pmp_reg_q[128 + (((j / 4) * 32) + (((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (8 * ((j % 4) + 1)) - 1 : (((8 * ((j % 4) + 1)) - 1) + (((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1)) - 1))-:(((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1)] = sv2v_tmp_864C8;
+				wire [8:1] sv2v_tmp_D8C4A;
+				assign sv2v_tmp_D8C4A = pmp_reg_n[128 + (((j / 4) * 32) + (((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (8 * ((j % 4) + 1)) - 1 : (((8 * ((j % 4) + 1)) - 1) + (((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1)) - 1))-:(((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1)];
+				always @(*) pmp_reg_n[0 + (j * 8)+:8] = sv2v_tmp_D8C4A;
+				wire [(((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1) * 1:1] sv2v_tmp_55D11;
+				assign sv2v_tmp_55D11 = pmp_reg_q[0 + (j * 8)+:8];
+				always @(*) pmp_reg_q[128 + (((j / 4) * 32) + (((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (8 * ((j % 4) + 1)) - 1 : (((8 * ((j % 4) + 1)) - 1) + (((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1)) - 1))-:(((8 * ((j % 4) + 1)) - 1) >= (8 * (j % 4)) ? (((8 * ((j % 4) + 1)) - 1) - (8 * (j % 4))) + 1 : ((8 * (j % 4)) - ((8 * ((j % 4) + 1)) - 1)) + 1)] = sv2v_tmp_55D11;
 			end
 			for (_gv_j_1 = 0; _gv_j_1 < N_PMP_ENTRIES; _gv_j_1 = _gv_j_1 + 1) begin : CS_PMP_REGS_FF
 				localparam j = _gv_j_1;
@@ -1070,24 +1080,24 @@ module cv32e40p_cs_registers (
 				end
 		end
 		else begin : gen_no_pmp_user
-			wire [768:1] sv2v_tmp_78853;
-			assign sv2v_tmp_78853 = 1'sb0;
-			always @(*) pmp_reg_q = sv2v_tmp_78853;
-			wire [32:1] sv2v_tmp_6C649;
-			assign sv2v_tmp_6C649 = 1'sb0;
-			always @(*) uepc_q = sv2v_tmp_6C649;
-			wire [6:1] sv2v_tmp_1A9D8;
-			assign sv2v_tmp_1A9D8 = 1'sb0;
-			always @(*) ucause_q = sv2v_tmp_1A9D8;
-			wire [24:1] sv2v_tmp_CC076;
-			assign sv2v_tmp_CC076 = 1'sb0;
-			always @(*) utvec_q = sv2v_tmp_CC076;
-			wire [2:1] sv2v_tmp_C675D;
-			assign sv2v_tmp_C675D = 1'sb0;
-			always @(*) utvec_mode_q = sv2v_tmp_C675D;
-			wire [2:1] sv2v_tmp_16422;
-			assign sv2v_tmp_16422 = 2'b11;
-			always @(*) priv_lvl_q = sv2v_tmp_16422;
+			wire [768:1] sv2v_tmp_465C4;
+			assign sv2v_tmp_465C4 = 1'sb0;
+			always @(*) pmp_reg_q = sv2v_tmp_465C4;
+			wire [32:1] sv2v_tmp_3902D;
+			assign sv2v_tmp_3902D = 1'sb0;
+			always @(*) uepc_q = sv2v_tmp_3902D;
+			wire [6:1] sv2v_tmp_B705E;
+			assign sv2v_tmp_B705E = 1'sb0;
+			always @(*) ucause_q = sv2v_tmp_B705E;
+			wire [24:1] sv2v_tmp_887BD;
+			assign sv2v_tmp_887BD = 1'sb0;
+			always @(*) utvec_q = sv2v_tmp_887BD;
+			wire [2:1] sv2v_tmp_75169;
+			assign sv2v_tmp_75169 = 1'sb0;
+			always @(*) utvec_mode_q = sv2v_tmp_75169;
+			wire [2:1] sv2v_tmp_49C73;
+			assign sv2v_tmp_49C73 = 2'b11;
+			always @(*) priv_lvl_q = sv2v_tmp_49C73;
 		end
 	endgenerate
 	localparam cv32e40p_pkg_DBG_CAUSE_NONE = 3'h0;
@@ -1236,9 +1246,9 @@ module cv32e40p_cs_registers (
 		for (_gv_cnt_gidx_1 = 0; _gv_cnt_gidx_1 < 32; _gv_cnt_gidx_1 = _gv_cnt_gidx_1 + 1) begin : gen_mhpmcounter
 			localparam cnt_gidx = _gv_cnt_gidx_1;
 			if ((cnt_gidx == 1) || (cnt_gidx >= (NUM_MHPMCOUNTERS + 3))) begin : gen_non_implemented
-				wire [64:1] sv2v_tmp_0C563;
-				assign sv2v_tmp_0C563 = 'b0;
-				always @(*) mhpmcounter_q[cnt_gidx * 64+:64] = sv2v_tmp_0C563;
+				wire [64:1] sv2v_tmp_54AEF;
+				assign sv2v_tmp_54AEF = 'b0;
+				always @(*) mhpmcounter_q[cnt_gidx * 64+:64] = sv2v_tmp_54AEF;
 			end
 			else begin : gen_implemented
 				always @(posedge clk or negedge rst_n)
@@ -1258,15 +1268,15 @@ module cv32e40p_cs_registers (
 		for (_gv_evt_gidx_1 = 0; _gv_evt_gidx_1 < 32; _gv_evt_gidx_1 = _gv_evt_gidx_1 + 1) begin : gen_mhpmevent
 			localparam evt_gidx = _gv_evt_gidx_1;
 			if ((evt_gidx < 3) || (evt_gidx >= (NUM_MHPMCOUNTERS + 3))) begin : gen_non_implemented
-				wire [32:1] sv2v_tmp_D8BE3;
-				assign sv2v_tmp_D8BE3 = 'b0;
-				always @(*) mhpmevent_q[evt_gidx * 32+:32] = sv2v_tmp_D8BE3;
+				wire [32:1] sv2v_tmp_A2164;
+				assign sv2v_tmp_A2164 = 'b0;
+				always @(*) mhpmevent_q[evt_gidx * 32+:32] = sv2v_tmp_A2164;
 			end
 			else begin : gen_implemented
 				if (1) begin : gen_tie_off
-					wire [16:1] sv2v_tmp_84EE5;
-					assign sv2v_tmp_84EE5 = 'b0;
-					always @(*) mhpmevent_q[(evt_gidx * 32) + 31-:16] = sv2v_tmp_84EE5;
+					wire [16:1] sv2v_tmp_89151;
+					assign sv2v_tmp_89151 = 'b0;
+					always @(*) mhpmevent_q[(evt_gidx * 32) + 31-:16] = sv2v_tmp_89151;
 				end
 				always @(posedge clk or negedge rst_n)
 					if (!rst_n)
@@ -1281,9 +1291,9 @@ module cv32e40p_cs_registers (
 		for (_gv_en_gidx_1 = 0; _gv_en_gidx_1 < 32; _gv_en_gidx_1 = _gv_en_gidx_1 + 1) begin : gen_mcounteren
 			localparam en_gidx = _gv_en_gidx_1;
 			if (((PULP_SECURE == 0) || (en_gidx == 1)) || (en_gidx >= (NUM_MHPMCOUNTERS + 3))) begin : gen_non_implemented
-				wire [1:1] sv2v_tmp_A6AAD;
-				assign sv2v_tmp_A6AAD = 'b0;
-				always @(*) mcounteren_q[en_gidx] = sv2v_tmp_A6AAD;
+				wire [1:1] sv2v_tmp_F00BA;
+				assign sv2v_tmp_F00BA = 'b0;
+				always @(*) mcounteren_q[en_gidx] = sv2v_tmp_F00BA;
 			end
 			else begin : gen_implemented
 				always @(posedge clk or negedge rst_n)
@@ -1299,9 +1309,9 @@ module cv32e40p_cs_registers (
 		for (_gv_inh_gidx_1 = 0; _gv_inh_gidx_1 < 32; _gv_inh_gidx_1 = _gv_inh_gidx_1 + 1) begin : gen_mcountinhibit
 			localparam inh_gidx = _gv_inh_gidx_1;
 			if ((inh_gidx == 1) || (inh_gidx >= (NUM_MHPMCOUNTERS + 3))) begin : gen_non_implemented
-				wire [1:1] sv2v_tmp_91B94;
-				assign sv2v_tmp_91B94 = 'b0;
-				always @(*) mcountinhibit_q[inh_gidx] = sv2v_tmp_91B94;
+				wire [1:1] sv2v_tmp_488B4;
+				assign sv2v_tmp_488B4 = 'b0;
+				always @(*) mcountinhibit_q[inh_gidx] = sv2v_tmp_488B4;
 			end
 			else begin : gen_implemented
 				always @(posedge clk or negedge rst_n)
@@ -1405,9 +1415,9 @@ module cv32e40p_register_file (
 			end
 		end
 		else begin : gen_no_mem_fp_write
-			wire [NUM_FP_WORDS * DATA_WIDTH:1] sv2v_tmp_6E2A2;
-			assign sv2v_tmp_6E2A2 = 'b0;
-			always @(*) mem_fp = sv2v_tmp_6E2A2;
+			wire [NUM_FP_WORDS * DATA_WIDTH:1] sv2v_tmp_A73F2;
+			assign sv2v_tmp_A73F2 = 'b0;
+			always @(*) mem_fp = sv2v_tmp_A73F2;
 		end
 	endgenerate
 endmodule
@@ -1518,14 +1528,14 @@ module cv32e40p_load_store_unit (
 						2'b00: data_be = 4'b1111;
 						2'b01: data_be = 4'b1110;
 						2'b10: data_be = 4'b1100;
-						2'b11: data_be = 4'b1000;
+						default: data_be = 4'b1000;
 					endcase
 				else
 					case (data_addr_int[1:0])
-						2'b00: data_be = 4'b0000;
 						2'b01: data_be = 4'b0001;
 						2'b10: data_be = 4'b0011;
 						2'b11: data_be = 4'b0111;
+						default: data_be = 4'b0000;
 					endcase
 			2'b01:
 				if (misaligned_st == 1'b0)
@@ -1533,7 +1543,7 @@ module cv32e40p_load_store_unit (
 						2'b00: data_be = 4'b0011;
 						2'b01: data_be = 4'b0110;
 						2'b10: data_be = 4'b1100;
-						2'b11: data_be = 4'b1000;
+						default: data_be = 4'b1000;
 					endcase
 				else
 					data_be = 4'b0001;
@@ -1542,7 +1552,7 @@ module cv32e40p_load_store_unit (
 					2'b00: data_be = 4'b0001;
 					2'b01: data_be = 4'b0010;
 					2'b10: data_be = 4'b0100;
-					2'b11: data_be = 4'b1000;
+					default: data_be = 4'b1000;
 				endcase
 		endcase
 	end
@@ -1715,6 +1725,7 @@ module cv32e40p_load_store_unit (
 	always @(*) begin
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case ({count_up, count_down})
 			2'b00: next_cnt = cnt_q;
 			2'b01: next_cnt = cnt_q - 1'b1;
@@ -2277,6 +2288,7 @@ module cv32e40p_id_stage (
 	always @(*) begin
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (regc_mux)
 			cv32e40p_pkg_REGC_ZERO: regfile_addr_rc_id = 1'sb0;
 			cv32e40p_pkg_REGC_RD: regfile_addr_rc_id = {regfile_fp_c, instr[REG_D_MSB:REG_D_LSB]};
@@ -2304,6 +2316,7 @@ module cv32e40p_id_stage (
 	always @(*) begin : jump_target_mux
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (ctrl_transfer_target_mux_sel)
 			cv32e40p_pkg_JT_JAL: jump_target = pc_id_i + imm_uj_type;
 			cv32e40p_pkg_JT_COND: jump_target = pc_id_i + imm_sb_type;
@@ -2334,6 +2347,7 @@ module cv32e40p_id_stage (
 	always @(*) begin : immediate_a_mux
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (imm_a_mux_sel)
 			cv32e40p_pkg_IMMA_Z: imm_a = imm_z_type;
 			cv32e40p_pkg_IMMA_ZERO: imm_a = 1'sb0;
@@ -2366,6 +2380,7 @@ module cv32e40p_id_stage (
 	always @(*) begin : immediate_b_mux
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (imm_b_mux_sel)
 			cv32e40p_pkg_IMMB_I: imm_b = imm_i_type;
 			cv32e40p_pkg_IMMB_S: imm_b = imm_s_type;
@@ -2459,6 +2474,7 @@ module cv32e40p_id_stage (
 	always @(*) begin
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (bmask_a_mux)
 			cv32e40p_pkg_BMASK_A_ZERO: bmask_a_id_imm = 1'sb0;
 			cv32e40p_pkg_BMASK_A_S3: bmask_a_id_imm = imm_s3_type[4:0];
@@ -2471,6 +2487,7 @@ module cv32e40p_id_stage (
 	always @(*) begin
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (bmask_b_mux)
 			cv32e40p_pkg_BMASK_B_ZERO: bmask_b_id_imm = 1'sb0;
 			cv32e40p_pkg_BMASK_B_ONE: bmask_b_id_imm = 5'd1;
@@ -2483,6 +2500,7 @@ module cv32e40p_id_stage (
 	always @(*) begin
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (alu_bmask_a_mux_sel)
 			cv32e40p_pkg_BMASK_A_IMM: bmask_a_id = bmask_a_id_imm;
 			cv32e40p_pkg_BMASK_A_REG: bmask_a_id = operand_b_fw_id[9:5];
@@ -2493,6 +2511,7 @@ module cv32e40p_id_stage (
 	always @(*) begin
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (alu_bmask_b_mux_sel)
 			cv32e40p_pkg_BMASK_B_IMM: bmask_b_id = bmask_b_id_imm;
 			cv32e40p_pkg_BMASK_B_REG: bmask_b_id = operand_b_fw_id[4:0];
@@ -2511,6 +2530,7 @@ module cv32e40p_id_stage (
 	always @(*) begin
 		if (_sv2v_0)
 			;
+		(* full_case, parallel_case *)
 		case (mult_imm_mux)
 			cv32e40p_pkg_MIMM_ZERO: mult_imm_id = 1'sb0;
 			cv32e40p_pkg_MIMM_S3: mult_imm_id = imm_s3_type[4:0];
@@ -2532,6 +2552,7 @@ module cv32e40p_id_stage (
 			always @(*) begin
 				if (_sv2v_0)
 					;
+				(* full_case, parallel_case *)
 				case (alu_op_a_mux_sel)
 					cv32e40p_pkg_OP_A_CURRPC:
 						if (ctrl_transfer_target_mux_sel == cv32e40p_pkg_JT_JALR) begin
@@ -2559,6 +2580,7 @@ module cv32e40p_id_stage (
 			always @(*) begin
 				if (_sv2v_0)
 					;
+				(* full_case, parallel_case *)
 				case (alu_op_b_mux_sel)
 					cv32e40p_pkg_OP_B_REGA_OR_FWD: begin
 						apu_read_regs[6+:6] = regfile_addr_ra_id;
@@ -2590,6 +2612,7 @@ module cv32e40p_id_stage (
 			always @(*) begin
 				if (_sv2v_0)
 					;
+				(* full_case, parallel_case *)
 				case (alu_op_c_mux_sel)
 					cv32e40p_pkg_OP_C_REGB_OR_FWD: begin
 						apu_read_regs[12+:6] = regfile_addr_rb_id;
@@ -2625,12 +2648,12 @@ module cv32e40p_id_stage (
 				localparam i = _gv_i_2;
 				assign apu_operands[i * 32+:32] = 1'sb0;
 			end
-			wire [18:1] sv2v_tmp_C6C4C;
-			assign sv2v_tmp_C6C4C = 1'sb0;
-			always @(*) apu_read_regs = sv2v_tmp_C6C4C;
-			wire [3:1] sv2v_tmp_C13AD;
-			assign sv2v_tmp_C13AD = 1'sb0;
-			always @(*) apu_read_regs_valid = sv2v_tmp_C13AD;
+			wire [18:1] sv2v_tmp_D495B;
+			assign sv2v_tmp_D495B = 1'sb0;
+			always @(*) apu_read_regs = sv2v_tmp_D495B;
+			wire [3:1] sv2v_tmp_66715;
+			assign sv2v_tmp_66715 = 1'sb0;
+			always @(*) apu_read_regs_valid = sv2v_tmp_66715;
 			assign apu_write_regs = 1'sb0;
 			assign apu_write_regs_valid = 1'sb0;
 			assign apu_waddr = 1'sb0;
@@ -2943,35 +2966,35 @@ module cv32e40p_id_stage (
 			assign hwlp_cnt_o = 'b0;
 			assign hwlp_valid = 'b0;
 			assign hwlp_we_masked = 'b0;
-			wire [32:1] sv2v_tmp_46680;
-			assign sv2v_tmp_46680 = 'b0;
-			always @(*) hwlp_start = sv2v_tmp_46680;
-			wire [32:1] sv2v_tmp_A8F69;
-			assign sv2v_tmp_A8F69 = 'b0;
-			always @(*) hwlp_end = sv2v_tmp_A8F69;
-			wire [32:1] sv2v_tmp_79FCB;
-			assign sv2v_tmp_79FCB = 'b0;
-			always @(*) hwlp_cnt = sv2v_tmp_79FCB;
+			wire [32:1] sv2v_tmp_3A88A;
+			assign sv2v_tmp_3A88A = 'b0;
+			always @(*) hwlp_start = sv2v_tmp_3A88A;
+			wire [32:1] sv2v_tmp_CF2EC;
+			assign sv2v_tmp_CF2EC = 'b0;
+			always @(*) hwlp_end = sv2v_tmp_CF2EC;
+			wire [32:1] sv2v_tmp_C02CF;
+			assign sv2v_tmp_C02CF = 'b0;
+			always @(*) hwlp_cnt = sv2v_tmp_C02CF;
 			assign hwlp_regid = 'b0;
 		end
 	endgenerate
 	localparam cv32e40p_pkg_BRANCH_COND = 2'b11;
-	function automatic [6:0] sv2v_cast_576C1;
+	function automatic [6:0] sv2v_cast_81146;
 		input reg [6:0] inp;
-		sv2v_cast_576C1 = inp;
+		sv2v_cast_81146 = inp;
 	endfunction
-	function automatic [2:0] sv2v_cast_9D1C7;
+	function automatic [2:0] sv2v_cast_F9F94;
 		input reg [2:0] inp;
-		sv2v_cast_9D1C7 = inp;
+		sv2v_cast_F9F94 = inp;
 	endfunction
-	function automatic [1:0] sv2v_cast_315CD;
+	function automatic [1:0] sv2v_cast_8FA4C;
 		input reg [1:0] inp;
-		sv2v_cast_315CD = inp;
+		sv2v_cast_8FA4C = inp;
 	endfunction
 	always @(posedge clk or negedge rst_n) begin : ID_EX_PIPE_REGISTERS
 		if (rst_n == 1'b0) begin
 			alu_en_ex_o <= 1'sb0;
-			alu_operator_ex_o <= sv2v_cast_576C1(7'b0000011);
+			alu_operator_ex_o <= sv2v_cast_81146(7'b0000011);
 			alu_operand_a_ex_o <= 1'sb0;
 			alu_operand_b_ex_o <= 1'sb0;
 			alu_operand_c_ex_o <= 1'sb0;
@@ -2982,7 +3005,7 @@ module cv32e40p_id_stage (
 			alu_clpx_shift_ex_o <= 2'b00;
 			alu_is_clpx_ex_o <= 1'b0;
 			alu_is_subrot_ex_o <= 1'b0;
-			mult_operator_ex_o <= sv2v_cast_9D1C7(3'b000);
+			mult_operator_ex_o <= sv2v_cast_F9F94(3'b000);
 			mult_operand_a_ex_o <= 1'sb0;
 			mult_operand_b_ex_o <= 1'sb0;
 			mult_operand_c_ex_o <= 1'sb0;
@@ -3011,7 +3034,7 @@ module cv32e40p_id_stage (
 			regfile_alu_we_ex_o <= 1'b0;
 			prepost_useincr_ex_o <= 1'b0;
 			csr_access_ex_o <= 1'b0;
-			csr_op_ex_o <= sv2v_cast_315CD(2'b00);
+			csr_op_ex_o <= sv2v_cast_8FA4C(2'b00);
 			data_we_ex_o <= 1'b0;
 			data_type_ex_o <= 2'b00;
 			data_sign_ext_ex_o <= 2'b00;
@@ -3040,7 +3063,10 @@ module cv32e40p_id_stage (
 			if (alu_en) begin
 				alu_operator_ex_o <= alu_operator;
 				alu_operand_a_ex_o <= alu_operand_a;
-				alu_operand_b_ex_o <= alu_operand_b;
+				if ((alu_op_b_mux_sel == cv32e40p_pkg_OP_B_REGB_OR_FWD) && ((alu_operator == sv2v_cast_81146(7'b0010110)) || (alu_operator == sv2v_cast_81146(7'b0010111))))
+					alu_operand_b_ex_o <= {1'b0, alu_operand_b[30:0]};
+				else
+					alu_operand_b_ex_o <= alu_operand_b;
 				alu_operand_c_ex_o <= alu_operand_c;
 				bmask_a_ex_o <= bmask_a_id;
 				bmask_b_ex_o <= bmask_b_id;
@@ -3106,13 +3132,13 @@ module cv32e40p_id_stage (
 		else if (ex_ready_i) begin
 			regfile_we_ex_o <= 1'b0;
 			regfile_alu_we_ex_o <= 1'b0;
-			csr_op_ex_o <= sv2v_cast_315CD(2'b00);
+			csr_op_ex_o <= sv2v_cast_8FA4C(2'b00);
 			data_req_ex_o <= 1'b0;
 			data_load_event_ex_o <= 1'b0;
 			data_misaligned_ex_o <= 1'b0;
 			branch_in_ex_o <= 1'b0;
 			apu_en_ex_o <= 1'b0;
-			alu_operator_ex_o <= sv2v_cast_576C1(7'b0000011);
+			alu_operator_ex_o <= sv2v_cast_81146(7'b0000011);
 			mult_en_ex_o <= 1'b0;
 			alu_en_ex_o <= 1'b1;
 		end
@@ -3593,29 +3619,29 @@ module cv32e40p_decoder (
 	localparam cv32e40p_pkg_VEC_MODE16 = 2'b10;
 	localparam cv32e40p_pkg_VEC_MODE32 = 2'b00;
 	localparam cv32e40p_pkg_VEC_MODE8 = 2'b11;
-	function automatic [6:0] sv2v_cast_576C1;
+	function automatic [6:0] sv2v_cast_81146;
 		input reg [6:0] inp;
-		sv2v_cast_576C1 = inp;
+		sv2v_cast_81146 = inp;
 	endfunction
-	function automatic [2:0] sv2v_cast_9D1C7;
+	function automatic [2:0] sv2v_cast_F9F94;
 		input reg [2:0] inp;
-		sv2v_cast_9D1C7 = inp;
+		sv2v_cast_F9F94 = inp;
 	endfunction
-	function automatic [3:0] sv2v_cast_EC9D9;
+	function automatic [3:0] sv2v_cast_FEEA0;
 		input reg [3:0] inp;
-		sv2v_cast_EC9D9 = inp;
+		sv2v_cast_FEEA0 = inp;
 	endfunction
-	function automatic [2:0] sv2v_cast_59BD5;
+	function automatic [2:0] sv2v_cast_8141C;
 		input reg [2:0] inp;
-		sv2v_cast_59BD5 = inp;
+		sv2v_cast_8141C = inp;
 	endfunction
-	function automatic [1:0] sv2v_cast_3C5CB;
+	function automatic [1:0] sv2v_cast_4EB16;
 		input reg [1:0] inp;
-		sv2v_cast_3C5CB = inp;
+		sv2v_cast_4EB16 = inp;
 	endfunction
-	function automatic [1:0] sv2v_cast_315CD;
+	function automatic [1:0] sv2v_cast_8FA4C;
 		input reg [1:0] inp;
-		sv2v_cast_315CD = inp;
+		sv2v_cast_8FA4C = inp;
 	endfunction
 	always @(*) begin : instruction_decoder
 		if (_sv2v_0)
@@ -3623,7 +3649,7 @@ module cv32e40p_decoder (
 		ctrl_transfer_insn = cv32e40p_pkg_BRANCH_NONE;
 		ctrl_transfer_target_mux_sel_o = cv32e40p_pkg_JT_JAL;
 		alu_en = 1'b1;
-		alu_operator_o = sv2v_cast_576C1(7'b0000011);
+		alu_operator_o = sv2v_cast_81146(7'b0000011);
 		alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_REGA_OR_FWD;
 		alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGB_OR_FWD;
 		alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_REGC_OR_FWD;
@@ -3636,7 +3662,7 @@ module cv32e40p_decoder (
 		imm_b_mux_sel_o = cv32e40p_pkg_IMMB_I;
 		mult_int_en = 1'b0;
 		mult_dot_en = 1'b0;
-		mult_operator_o = sv2v_cast_9D1C7(3'b010);
+		mult_operator_o = sv2v_cast_F9F94(3'b010);
 		mult_imm_mux_o = cv32e40p_pkg_MIMM_ZERO;
 		mult_signed_mode_o = 2'b00;
 		mult_sel_subword_o = 1'b0;
@@ -3645,12 +3671,12 @@ module cv32e40p_decoder (
 		apu_op_o = 1'sb0;
 		apu_lat_o = 1'sb0;
 		fp_rnd_mode_o = 1'sb0;
-		fpu_op = sv2v_cast_EC9D9(6);
+		fpu_op = sv2v_cast_FEEA0(6);
 		fpu_op_mod = 1'b0;
 		fpu_vec_op = 1'b0;
-		fpu_dst_fmt_o = sv2v_cast_59BD5('d0);
-		fpu_src_fmt_o = sv2v_cast_59BD5('d0);
-		fpu_int_fmt_o = sv2v_cast_3C5CB(2);
+		fpu_dst_fmt_o = sv2v_cast_8141C('d0);
+		fpu_src_fmt_o = sv2v_cast_8141C('d0);
+		fpu_int_fmt_o = sv2v_cast_4EB16(2);
 		check_fprm = 1'b0;
 		fp_op_group = 2'd0;
 		regfile_mem_we = 1'b0;
@@ -3664,7 +3690,7 @@ module cv32e40p_decoder (
 		csr_access_o = 1'b0;
 		csr_status_o = 1'b0;
 		csr_illegal = 1'b0;
-		csr_op = sv2v_cast_315CD(2'b00);
+		csr_op = sv2v_cast_8FA4C(2'b00);
 		mret_insn_o = 1'b0;
 		uret_insn_o = 1'b0;
 		dret_insn_o = 1'b0;
@@ -3696,6 +3722,7 @@ module cv32e40p_decoder (
 		mret_dec_o = 1'b0;
 		uret_dec_o = 1'b0;
 		dret_dec_o = 1'b0;
+		(* full_case, parallel_case *)
 		case (instr_rdata_i[6:0])
 			cv32e40p_pkg_OPCODE_JAL: begin
 				ctrl_transfer_target_mux_sel_o = cv32e40p_pkg_JT_JAL;
@@ -3703,7 +3730,7 @@ module cv32e40p_decoder (
 				alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_CURRPC;
 				alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 				imm_b_mux_sel_o = cv32e40p_pkg_IMMB_PCINCR;
-				alu_operator_o = sv2v_cast_576C1(7'b0011000);
+				alu_operator_o = sv2v_cast_81146(7'b0011000);
 				regfile_alu_we = 1'b1;
 			end
 			cv32e40p_pkg_OPCODE_JALR: begin
@@ -3712,7 +3739,7 @@ module cv32e40p_decoder (
 				alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_CURRPC;
 				alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 				imm_b_mux_sel_o = cv32e40p_pkg_IMMB_PCINCR;
-				alu_operator_o = sv2v_cast_576C1(7'b0011000);
+				alu_operator_o = sv2v_cast_81146(7'b0011000);
 				regfile_alu_we = 1'b1;
 				rega_used_o = 1'b1;
 				if (instr_rdata_i[14:12] != 3'b000) begin
@@ -3727,13 +3754,14 @@ module cv32e40p_decoder (
 				alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_JT;
 				rega_used_o = 1'b1;
 				regb_used_o = 1'b1;
+				(* full_case, parallel_case *)
 				case (instr_rdata_i[14:12])
-					3'b000: alu_operator_o = sv2v_cast_576C1(7'b0001100);
-					3'b001: alu_operator_o = sv2v_cast_576C1(7'b0001101);
-					3'b100: alu_operator_o = sv2v_cast_576C1(7'b0000000);
-					3'b101: alu_operator_o = sv2v_cast_576C1(7'b0001010);
-					3'b110: alu_operator_o = sv2v_cast_576C1(7'b0000001);
-					3'b111: alu_operator_o = sv2v_cast_576C1(7'b0001011);
+					3'b000: alu_operator_o = sv2v_cast_81146(7'b0001100);
+					3'b001: alu_operator_o = sv2v_cast_81146(7'b0001101);
+					3'b100: alu_operator_o = sv2v_cast_81146(7'b0000000);
+					3'b101: alu_operator_o = sv2v_cast_81146(7'b0001010);
+					3'b110: alu_operator_o = sv2v_cast_81146(7'b0000001);
+					3'b111: alu_operator_o = sv2v_cast_81146(7'b0001011);
 					default: illegal_insn_o = 1'b1;
 				endcase
 			end
@@ -3742,10 +3770,11 @@ module cv32e40p_decoder (
 				data_we_o = 1'b1;
 				rega_used_o = 1'b1;
 				regb_used_o = 1'b1;
-				alu_operator_o = sv2v_cast_576C1(7'b0011000);
+				alu_operator_o = sv2v_cast_81146(7'b0011000);
 				alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_REGB_OR_FWD;
 				imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S;
 				alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
+				(* full_case, parallel_case *)
 				case (instr_rdata_i[14:12])
 					3'b000: data_type_o = 2'b10;
 					3'b001: data_type_o = 2'b01;
@@ -3761,10 +3790,11 @@ module cv32e40p_decoder (
 				data_req = 1'b1;
 				regfile_mem_we = 1'b1;
 				rega_used_o = 1'b1;
-				alu_operator_o = sv2v_cast_576C1(7'b0011000);
+				alu_operator_o = sv2v_cast_81146(7'b0011000);
 				alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 				imm_b_mux_sel_o = cv32e40p_pkg_IMMB_I;
 				data_sign_extension_o = {1'b0, ~instr_rdata_i[14]};
+				(* full_case, parallel_case *)
 				case (instr_rdata_i[14:12])
 					3'b000, 3'b100: data_type_o = 2'b10;
 					3'b001, 3'b101: data_type_o = 2'b01;
@@ -3784,6 +3814,7 @@ module cv32e40p_decoder (
 						alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_REGA_OR_FWD;
 						data_sign_extension_o = 1'b1;
 						atop_o = {1'b1, instr_rdata_i[31:27]};
+						(* full_case, parallel_case *)
 						case (instr_rdata_i[31:27])
 							cv32e40p_pkg_AMO_LR: data_we_o = 1'b0;
 							cv32e40p_pkg_AMO_SC, cv32e40p_pkg_AMO_SWAP, cv32e40p_pkg_AMO_ADD, cv32e40p_pkg_AMO_XOR, cv32e40p_pkg_AMO_AND, cv32e40p_pkg_AMO_OR, cv32e40p_pkg_AMO_MIN, cv32e40p_pkg_AMO_MAX, cv32e40p_pkg_AMO_MINU, cv32e40p_pkg_AMO_MAXU: begin
@@ -3804,14 +3835,14 @@ module cv32e40p_decoder (
 				alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 				imm_a_mux_sel_o = cv32e40p_pkg_IMMA_ZERO;
 				imm_b_mux_sel_o = cv32e40p_pkg_IMMB_U;
-				alu_operator_o = sv2v_cast_576C1(7'b0011000);
+				alu_operator_o = sv2v_cast_81146(7'b0011000);
 				regfile_alu_we = 1'b1;
 			end
 			cv32e40p_pkg_OPCODE_AUIPC: begin
 				alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_CURRPC;
 				alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 				imm_b_mux_sel_o = cv32e40p_pkg_IMMB_U;
-				alu_operator_o = sv2v_cast_576C1(7'b0011000);
+				alu_operator_o = sv2v_cast_81146(7'b0011000);
 				regfile_alu_we = 1'b1;
 			end
 			cv32e40p_pkg_OPCODE_OPIMM: begin
@@ -3819,23 +3850,24 @@ module cv32e40p_decoder (
 				imm_b_mux_sel_o = cv32e40p_pkg_IMMB_I;
 				regfile_alu_we = 1'b1;
 				rega_used_o = 1'b1;
+				(* full_case, parallel_case *)
 				case (instr_rdata_i[14:12])
-					3'b000: alu_operator_o = sv2v_cast_576C1(7'b0011000);
-					3'b010: alu_operator_o = sv2v_cast_576C1(7'b0000010);
-					3'b011: alu_operator_o = sv2v_cast_576C1(7'b0000011);
-					3'b100: alu_operator_o = sv2v_cast_576C1(7'b0101111);
-					3'b110: alu_operator_o = sv2v_cast_576C1(7'b0101110);
-					3'b111: alu_operator_o = sv2v_cast_576C1(7'b0010101);
+					3'b000: alu_operator_o = sv2v_cast_81146(7'b0011000);
+					3'b010: alu_operator_o = sv2v_cast_81146(7'b0000010);
+					3'b011: alu_operator_o = sv2v_cast_81146(7'b0000011);
+					3'b100: alu_operator_o = sv2v_cast_81146(7'b0101111);
+					3'b110: alu_operator_o = sv2v_cast_81146(7'b0101110);
+					3'b111: alu_operator_o = sv2v_cast_81146(7'b0010101);
 					3'b001: begin
-						alu_operator_o = sv2v_cast_576C1(7'b0100111);
+						alu_operator_o = sv2v_cast_81146(7'b0100111);
 						if (instr_rdata_i[31:25] != 7'b0000000)
 							illegal_insn_o = 1'b1;
 					end
 					3'b101:
 						if (instr_rdata_i[31:25] == 7'b0000000)
-							alu_operator_o = sv2v_cast_576C1(7'b0100101);
+							alu_operator_o = sv2v_cast_81146(7'b0100101);
 						else if (instr_rdata_i[31:25] == 7'b0100000)
-							alu_operator_o = sv2v_cast_576C1(7'b0100100);
+							alu_operator_o = sv2v_cast_81146(7'b0100100);
 						else
 							illegal_insn_o = 1'b1;
 				endcase
@@ -3865,27 +3897,29 @@ module cv32e40p_decoder (
 						scalar_replication_o = instr_rdata_i[14];
 						check_fprm = 1'b1;
 						fp_rnd_mode_o = frm_i;
+						(* full_case, parallel_case *)
 						case (instr_rdata_i[13:12])
 							2'b00: begin
-								fpu_dst_fmt_o = sv2v_cast_59BD5('d0);
+								fpu_dst_fmt_o = sv2v_cast_8141C('d0);
 								alu_vec_mode_o = cv32e40p_pkg_VEC_MODE32;
 							end
 							2'b01: begin
-								fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
+								fpu_dst_fmt_o = sv2v_cast_8141C('d4);
 								alu_vec_mode_o = cv32e40p_pkg_VEC_MODE16;
 							end
 							2'b10: begin
-								fpu_dst_fmt_o = sv2v_cast_59BD5('d2);
+								fpu_dst_fmt_o = sv2v_cast_8141C('d2);
 								alu_vec_mode_o = cv32e40p_pkg_VEC_MODE16;
 							end
 							2'b11: begin
-								fpu_dst_fmt_o = sv2v_cast_59BD5('d3);
+								fpu_dst_fmt_o = sv2v_cast_8141C('d3);
 								alu_vec_mode_o = cv32e40p_pkg_VEC_MODE8;
 							end
 						endcase
 						fpu_src_fmt_o = fpu_dst_fmt_o;
+						(* full_case, parallel_case *)
 						if (instr_rdata_i[29:25] == 5'b00001) begin
-							fpu_op = sv2v_cast_EC9D9(2);
+							fpu_op = sv2v_cast_FEEA0(2);
 							fp_op_group = 2'd0;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
 							alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_REGB_OR_FWD;
@@ -3893,7 +3927,7 @@ module cv32e40p_decoder (
 							scalar_replication_c_o = instr_rdata_i[14];
 						end
 						else if (instr_rdata_i[29:25] == 5'b00010) begin
-							fpu_op = sv2v_cast_EC9D9(2);
+							fpu_op = sv2v_cast_FEEA0(2);
 							fpu_op_mod = 1'b1;
 							fp_op_group = 2'd0;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
@@ -3902,28 +3936,28 @@ module cv32e40p_decoder (
 							scalar_replication_c_o = instr_rdata_i[14];
 						end
 						else if (instr_rdata_i[29:25] == 5'b00011) begin
-							fpu_op = sv2v_cast_EC9D9(3);
+							fpu_op = sv2v_cast_FEEA0(3);
 							fp_op_group = 2'd0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b00100) begin
-							fpu_op = sv2v_cast_EC9D9(4);
+							fpu_op = sv2v_cast_FEEA0(4);
 							fp_op_group = 2'd1;
 						end
 						else if (instr_rdata_i[29:25] == 5'b00101) begin
-							fpu_op = sv2v_cast_EC9D9(7);
+							fpu_op = sv2v_cast_FEEA0(7);
 							fp_rnd_mode_o = 3'b000;
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b00110) begin
-							fpu_op = sv2v_cast_EC9D9(7);
+							fpu_op = sv2v_cast_FEEA0(7);
 							fp_rnd_mode_o = 3'b001;
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b00111) begin
 							regb_used_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(5);
+							fpu_op = sv2v_cast_FEEA0(5);
 							fp_op_group = 2'd1;
 							if ((instr_rdata_i[24:20] != 5'b00000) || instr_rdata_i[14])
 								illegal_insn_o = 1'b1;
@@ -3935,7 +3969,7 @@ module cv32e40p_decoder (
 								reg_fp_c_o = 1'b1;
 							else
 								reg_fp_c_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(0);
+							fpu_op = sv2v_cast_FEEA0(0);
 							fp_op_group = 2'd0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b01001) begin
@@ -3945,16 +3979,17 @@ module cv32e40p_decoder (
 								reg_fp_c_o = 1'b1;
 							else
 								reg_fp_c_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(0);
+							fpu_op = sv2v_cast_FEEA0(0);
 							fpu_op_mod = 1'b1;
 							fp_op_group = 2'd0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b01100) begin
 							regb_used_o = 1'b0;
 							scalar_replication_o = 1'b0;
+							(* full_case, parallel_case *)
 							if (instr_rdata_i[24:20] == 5'b00000) begin
 								alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
-								fpu_op = sv2v_cast_EC9D9(6);
+								fpu_op = sv2v_cast_FEEA0(6);
 								fp_rnd_mode_o = 3'b011;
 								fp_op_group = 2'd2;
 								check_fprm = 1'b0;
@@ -3969,7 +4004,7 @@ module cv32e40p_decoder (
 							end
 							else if (instr_rdata_i[24:20] == 5'b00001) begin
 								reg_fp_d_o = 1'b0;
-								fpu_op = sv2v_cast_EC9D9(9);
+								fpu_op = sv2v_cast_FEEA0(9);
 								fp_rnd_mode_o = 3'b000;
 								fp_op_group = 2'd2;
 								check_fprm = 1'b0;
@@ -3979,41 +4014,43 @@ module cv32e40p_decoder (
 							else if ((instr_rdata_i[24:20] | 5'b00001) == 5'b00011) begin
 								fp_op_group = 2'd3;
 								fpu_op_mod = instr_rdata_i[14];
+								(* full_case, parallel_case *)
 								case (instr_rdata_i[13:12])
-									2'b00: fpu_int_fmt_o = sv2v_cast_3C5CB(2);
-									2'b01, 2'b10: fpu_int_fmt_o = sv2v_cast_3C5CB(1);
-									2'b11: fpu_int_fmt_o = sv2v_cast_3C5CB(0);
+									2'b00: fpu_int_fmt_o = sv2v_cast_4EB16(2);
+									2'b01, 2'b10: fpu_int_fmt_o = sv2v_cast_4EB16(1);
+									2'b11: fpu_int_fmt_o = sv2v_cast_4EB16(0);
 								endcase
 								if (instr_rdata_i[20]) begin
 									reg_fp_a_o = 1'b0;
-									fpu_op = sv2v_cast_EC9D9(12);
+									fpu_op = sv2v_cast_FEEA0(12);
 								end
 								else begin
 									reg_fp_d_o = 1'b0;
-									fpu_op = sv2v_cast_EC9D9(11);
+									fpu_op = sv2v_cast_FEEA0(11);
 								end
 							end
 							else if ((instr_rdata_i[24:20] | 5'b00011) == 5'b00111) begin
-								fpu_op = sv2v_cast_EC9D9(10);
+								fpu_op = sv2v_cast_FEEA0(10);
 								fp_op_group = 2'd3;
+								(* full_case, parallel_case *)
 								case (instr_rdata_i[21:20])
 									2'b00: begin
-										fpu_src_fmt_o = sv2v_cast_59BD5('d0);
+										fpu_src_fmt_o = sv2v_cast_8141C('d0);
 										if (~cv32e40p_pkg_C_RVF)
 											illegal_insn_o = 1'b1;
 									end
 									2'b01: begin
-										fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+										fpu_src_fmt_o = sv2v_cast_8141C('d4);
 										if (~cv32e40p_pkg_C_XF16ALT)
 											illegal_insn_o = 1'b1;
 									end
 									2'b10: begin
-										fpu_src_fmt_o = sv2v_cast_59BD5('d2);
+										fpu_src_fmt_o = sv2v_cast_8141C('d2);
 										if (~cv32e40p_pkg_C_XF16)
 											illegal_insn_o = 1'b1;
 									end
 									2'b11: begin
-										fpu_src_fmt_o = sv2v_cast_59BD5('d3);
+										fpu_src_fmt_o = sv2v_cast_8141C('d3);
 										if (~cv32e40p_pkg_C_XF8)
 											illegal_insn_o = 1'b1;
 									end
@@ -4025,33 +4062,33 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						else if (instr_rdata_i[29:25] == 5'b01101) begin
-							fpu_op = sv2v_cast_EC9D9(6);
+							fpu_op = sv2v_cast_FEEA0(6);
 							fp_rnd_mode_o = 3'b000;
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b01110) begin
-							fpu_op = sv2v_cast_EC9D9(6);
+							fpu_op = sv2v_cast_FEEA0(6);
 							fp_rnd_mode_o = 3'b001;
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b01111) begin
-							fpu_op = sv2v_cast_EC9D9(6);
+							fpu_op = sv2v_cast_FEEA0(6);
 							fp_rnd_mode_o = 3'b010;
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b10000) begin
 							reg_fp_d_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(8);
+							fpu_op = sv2v_cast_FEEA0(8);
 							fp_rnd_mode_o = 3'b010;
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b10001) begin
 							reg_fp_d_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(8);
+							fpu_op = sv2v_cast_FEEA0(8);
 							fpu_op_mod = 1'b1;
 							fp_rnd_mode_o = 3'b010;
 							fp_op_group = 2'd2;
@@ -4059,14 +4096,14 @@ module cv32e40p_decoder (
 						end
 						else if (instr_rdata_i[29:25] == 5'b10010) begin
 							reg_fp_d_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(8);
+							fpu_op = sv2v_cast_FEEA0(8);
 							fp_rnd_mode_o = 3'b001;
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b10011) begin
 							reg_fp_d_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(8);
+							fpu_op = sv2v_cast_FEEA0(8);
 							fpu_op_mod = 1'b1;
 							fp_rnd_mode_o = 3'b001;
 							fp_op_group = 2'd2;
@@ -4074,14 +4111,14 @@ module cv32e40p_decoder (
 						end
 						else if (instr_rdata_i[29:25] == 5'b10100) begin
 							reg_fp_d_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(8);
+							fpu_op = sv2v_cast_FEEA0(8);
 							fp_rnd_mode_o = 3'b000;
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 						end
 						else if (instr_rdata_i[29:25] == 5'b10101) begin
 							reg_fp_d_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(8);
+							fpu_op = sv2v_cast_FEEA0(8);
 							fpu_op_mod = 1'b1;
 							fp_rnd_mode_o = 3'b000;
 							fp_op_group = 2'd2;
@@ -4092,41 +4129,42 @@ module cv32e40p_decoder (
 							fp_op_group = 2'd3;
 							scalar_replication_o = 1'b0;
 							if (instr_rdata_i[25])
-								fpu_op = sv2v_cast_EC9D9(14);
+								fpu_op = sv2v_cast_FEEA0(14);
 							else
-								fpu_op = sv2v_cast_EC9D9(13);
+								fpu_op = sv2v_cast_FEEA0(13);
 							if (instr_rdata_i[26]) begin
-								fpu_src_fmt_o = sv2v_cast_59BD5('d1);
+								fpu_src_fmt_o = sv2v_cast_8141C('d1);
 								if (~cv32e40p_pkg_C_RVD)
 									illegal_insn_o = 1'b1;
 							end
 							else begin
-								fpu_src_fmt_o = sv2v_cast_59BD5('d0);
+								fpu_src_fmt_o = sv2v_cast_8141C('d0);
 								if (~cv32e40p_pkg_C_RVF)
 									illegal_insn_o = 1'b1;
 							end
-							if (fpu_op == sv2v_cast_EC9D9(14)) begin
+							if (fpu_op == sv2v_cast_FEEA0(14)) begin
 								if (~cv32e40p_pkg_C_XF8 || ~cv32e40p_pkg_C_RVD)
 									illegal_insn_o = 1'b1;
 							end
 							else if (instr_rdata_i[14]) begin
-								if (fpu_dst_fmt_o == sv2v_cast_59BD5('d0))
+								if (fpu_dst_fmt_o == sv2v_cast_8141C('d0))
 									illegal_insn_o = 1'b1;
-								if (~cv32e40p_pkg_C_RVD && (fpu_dst_fmt_o != sv2v_cast_59BD5('d3)))
+								if (~cv32e40p_pkg_C_RVD && (fpu_dst_fmt_o != sv2v_cast_8141C('d3)))
 									illegal_insn_o = 1'b1;
 							end
 						end
 						else
 							illegal_insn_o = 1'b1;
-						if ((~cv32e40p_pkg_C_RVF || ~cv32e40p_pkg_C_RVD) && (fpu_dst_fmt_o == sv2v_cast_59BD5('d0)))
+						if ((~cv32e40p_pkg_C_RVF || ~cv32e40p_pkg_C_RVD) && (fpu_dst_fmt_o == sv2v_cast_8141C('d0)))
 							illegal_insn_o = 1'b1;
-						if ((~cv32e40p_pkg_C_XF16 || ~cv32e40p_pkg_C_RVF) && (fpu_dst_fmt_o == sv2v_cast_59BD5('d2)))
+						if ((~cv32e40p_pkg_C_XF16 || ~cv32e40p_pkg_C_RVF) && (fpu_dst_fmt_o == sv2v_cast_8141C('d2)))
 							illegal_insn_o = 1'b1;
-						if ((~cv32e40p_pkg_C_XF16ALT || ~cv32e40p_pkg_C_RVF) && (fpu_dst_fmt_o == sv2v_cast_59BD5('d4)))
+						if ((~cv32e40p_pkg_C_XF16ALT || ~cv32e40p_pkg_C_RVF) && (fpu_dst_fmt_o == sv2v_cast_8141C('d4)))
 							illegal_insn_o = 1'b1;
-						if ((~cv32e40p_pkg_C_XF8 || (~cv32e40p_pkg_C_XF16 && ~cv32e40p_pkg_C_XF16ALT)) && (fpu_dst_fmt_o == sv2v_cast_59BD5('d3)))
+						if ((~cv32e40p_pkg_C_XF8 || (~cv32e40p_pkg_C_XF16 && ~cv32e40p_pkg_C_XF16ALT)) && (fpu_dst_fmt_o == sv2v_cast_8141C('d3)))
 							illegal_insn_o = 1'b1;
 						if (check_fprm) begin
+							(* full_case, parallel_case *)
 							if ((3'b000 <= frm_i) && (3'b100 >= frm_i))
 								;
 							else
@@ -4134,11 +4172,12 @@ module cv32e40p_decoder (
 						end
 						case (fp_op_group)
 							2'd0:
+								(* full_case, parallel_case *)
 								case (fpu_dst_fmt_o)
-									sv2v_cast_59BD5('d0): apu_lat_o = (FPU_ADDMUL_LAT < 2 ? FPU_ADDMUL_LAT + 1 : 2'h3);
-									sv2v_cast_59BD5('d2): apu_lat_o = 1;
-									sv2v_cast_59BD5('d4): apu_lat_o = 1;
-									sv2v_cast_59BD5('d3): apu_lat_o = 1;
+									sv2v_cast_8141C('d0): apu_lat_o = (FPU_ADDMUL_LAT < 2 ? FPU_ADDMUL_LAT + 1 : 2'h3);
+									sv2v_cast_8141C('d2): apu_lat_o = 1;
+									sv2v_cast_8141C('d4): apu_lat_o = 1;
+									sv2v_cast_8141C('d3): apu_lat_o = 1;
 									default:
 										;
 								endcase
@@ -4156,21 +4195,22 @@ module cv32e40p_decoder (
 					rega_used_o = 1'b1;
 					if (~instr_rdata_i[28])
 						regb_used_o = 1'b1;
+					(* full_case, parallel_case *)
 					case ({instr_rdata_i[30:25], instr_rdata_i[14:12]})
-						9'b000000000: alu_operator_o = sv2v_cast_576C1(7'b0011000);
-						9'b100000000: alu_operator_o = sv2v_cast_576C1(7'b0011001);
-						9'b000000010: alu_operator_o = sv2v_cast_576C1(7'b0000010);
-						9'b000000011: alu_operator_o = sv2v_cast_576C1(7'b0000011);
-						9'b000000100: alu_operator_o = sv2v_cast_576C1(7'b0101111);
-						9'b000000110: alu_operator_o = sv2v_cast_576C1(7'b0101110);
-						9'b000000111: alu_operator_o = sv2v_cast_576C1(7'b0010101);
-						9'b000000001: alu_operator_o = sv2v_cast_576C1(7'b0100111);
-						9'b000000101: alu_operator_o = sv2v_cast_576C1(7'b0100101);
-						9'b100000101: alu_operator_o = sv2v_cast_576C1(7'b0100100);
+						9'b000000000: alu_operator_o = sv2v_cast_81146(7'b0011000);
+						9'b100000000: alu_operator_o = sv2v_cast_81146(7'b0011001);
+						9'b000000010: alu_operator_o = sv2v_cast_81146(7'b0000010);
+						9'b000000011: alu_operator_o = sv2v_cast_81146(7'b0000011);
+						9'b000000100: alu_operator_o = sv2v_cast_81146(7'b0101111);
+						9'b000000110: alu_operator_o = sv2v_cast_81146(7'b0101110);
+						9'b000000111: alu_operator_o = sv2v_cast_81146(7'b0010101);
+						9'b000000001: alu_operator_o = sv2v_cast_81146(7'b0100111);
+						9'b000000101: alu_operator_o = sv2v_cast_81146(7'b0100101);
+						9'b100000101: alu_operator_o = sv2v_cast_81146(7'b0100100);
 						9'b000001000: begin
 							alu_en = 1'b0;
 							mult_int_en = 1'b1;
-							mult_operator_o = sv2v_cast_9D1C7(3'b000);
+							mult_operator_o = sv2v_cast_F9F94(3'b000);
 							regc_mux_o = cv32e40p_pkg_REGC_ZERO;
 						end
 						9'b000001001: begin
@@ -4179,7 +4219,7 @@ module cv32e40p_decoder (
 							regc_used_o = 1'b1;
 							regc_mux_o = cv32e40p_pkg_REGC_ZERO;
 							mult_signed_mode_o = 2'b11;
-							mult_operator_o = sv2v_cast_9D1C7(3'b110);
+							mult_operator_o = sv2v_cast_F9F94(3'b110);
 						end
 						9'b000001010: begin
 							alu_en = 1'b0;
@@ -4187,7 +4227,7 @@ module cv32e40p_decoder (
 							regc_used_o = 1'b1;
 							regc_mux_o = cv32e40p_pkg_REGC_ZERO;
 							mult_signed_mode_o = 2'b01;
-							mult_operator_o = sv2v_cast_9D1C7(3'b110);
+							mult_operator_o = sv2v_cast_F9F94(3'b110);
 						end
 						9'b000001011: begin
 							alu_en = 1'b0;
@@ -4195,31 +4235,31 @@ module cv32e40p_decoder (
 							regc_used_o = 1'b1;
 							regc_mux_o = cv32e40p_pkg_REGC_ZERO;
 							mult_signed_mode_o = 2'b00;
-							mult_operator_o = sv2v_cast_9D1C7(3'b110);
+							mult_operator_o = sv2v_cast_F9F94(3'b110);
 						end
 						9'b000001100: begin
 							alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_REGB_OR_FWD;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
 							regb_used_o = 1'b1;
-							alu_operator_o = sv2v_cast_576C1(7'b0110001);
+							alu_operator_o = sv2v_cast_81146(7'b0110001);
 						end
 						9'b000001101: begin
 							alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_REGB_OR_FWD;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
 							regb_used_o = 1'b1;
-							alu_operator_o = sv2v_cast_576C1(7'b0110000);
+							alu_operator_o = sv2v_cast_81146(7'b0110000);
 						end
 						9'b000001110: begin
 							alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_REGB_OR_FWD;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
 							regb_used_o = 1'b1;
-							alu_operator_o = sv2v_cast_576C1(7'b0110011);
+							alu_operator_o = sv2v_cast_81146(7'b0110011);
 						end
 						9'b000001111: begin
 							alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_REGB_OR_FWD;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
 							regb_used_o = 1'b1;
-							alu_operator_o = sv2v_cast_576C1(7'b0110010);
+							alu_operator_o = sv2v_cast_81146(7'b0110010);
 						end
 						default: illegal_insn_o = 1'b1;
 					endcase
@@ -4242,59 +4282,58 @@ module cv32e40p_decoder (
 					end
 					check_fprm = 1'b1;
 					fp_rnd_mode_o = instr_rdata_i[14:12];
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[26:25])
-						2'b00: fpu_dst_fmt_o = sv2v_cast_59BD5('d0);
-						2'b01: fpu_dst_fmt_o = sv2v_cast_59BD5('d1);
+						2'b00: fpu_dst_fmt_o = sv2v_cast_8141C('d0);
+						2'b01: fpu_dst_fmt_o = sv2v_cast_8141C('d1);
 						2'b10:
 							if (instr_rdata_i[14:12] == 3'b101)
-								fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
+								fpu_dst_fmt_o = sv2v_cast_8141C('d4);
 							else
-								fpu_dst_fmt_o = sv2v_cast_59BD5('d2);
-						2'b11: fpu_dst_fmt_o = sv2v_cast_59BD5('d3);
+								fpu_dst_fmt_o = sv2v_cast_8141C('d2);
+						2'b11: fpu_dst_fmt_o = sv2v_cast_8141C('d3);
 					endcase
 					fpu_src_fmt_o = fpu_dst_fmt_o;
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[31:27])
 						5'b00000: begin
-							fpu_op = sv2v_cast_EC9D9(2);
+							fpu_op = sv2v_cast_FEEA0(2);
 							fp_op_group = 2'd0;
-							apu_op_o = 2'b00;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
 							alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_REGB_OR_FWD;
 						end
 						5'b00001: begin
-							fpu_op = sv2v_cast_EC9D9(2);
+							fpu_op = sv2v_cast_FEEA0(2);
 							fpu_op_mod = 1'b1;
 							fp_op_group = 2'd0;
-							apu_op_o = 2'b01;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
 							alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_REGB_OR_FWD;
 						end
 						5'b00010: begin
-							fpu_op = sv2v_cast_EC9D9(3);
+							fpu_op = sv2v_cast_FEEA0(3);
 							fp_op_group = 2'd0;
 						end
 						5'b00011: begin
-							fpu_op = sv2v_cast_EC9D9(4);
+							fpu_op = sv2v_cast_FEEA0(4);
 							fp_op_group = 2'd1;
 						end
 						5'b01011: begin
 							regb_used_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(5);
+							fpu_op = sv2v_cast_FEEA0(5);
 							fp_op_group = 2'd1;
-							apu_op_o = 1'b1;
 							if (instr_rdata_i[24:20] != 5'b00000)
 								illegal_insn_o = 1'b1;
 						end
 						5'b00100: begin
-							fpu_op = sv2v_cast_EC9D9(6);
+							fpu_op = sv2v_cast_FEEA0(6);
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 							if (cv32e40p_pkg_C_XF16ALT) begin
 								if (!(|{(3'b000 <= instr_rdata_i[14:12]) && (3'b010 >= instr_rdata_i[14:12]), (3'b100 <= instr_rdata_i[14:12]) && (3'b110 >= instr_rdata_i[14:12])}))
 									illegal_insn_o = 1'b1;
 								if (instr_rdata_i[14]) begin
-									fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
-									fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+									fpu_dst_fmt_o = sv2v_cast_8141C('d4);
+									fpu_src_fmt_o = sv2v_cast_8141C('d4);
 								end
 								else
 									fp_rnd_mode_o = {1'b0, instr_rdata_i[13:12]};
@@ -4303,15 +4342,15 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						5'b00101: begin
-							fpu_op = sv2v_cast_EC9D9(7);
+							fpu_op = sv2v_cast_FEEA0(7);
 							fp_op_group = 2'd2;
 							check_fprm = 1'b0;
 							if (cv32e40p_pkg_C_XF16ALT) begin
 								if (!(|{(3'b000 <= instr_rdata_i[14:12]) && (3'b001 >= instr_rdata_i[14:12]), (3'b100 <= instr_rdata_i[14:12]) && (3'b101 >= instr_rdata_i[14:12])}))
 									illegal_insn_o = 1'b1;
 								if (instr_rdata_i[14]) begin
-									fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
-									fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+									fpu_dst_fmt_o = sv2v_cast_8141C('d4);
+									fpu_src_fmt_o = sv2v_cast_8141C('d4);
 								end
 								else
 									fp_rnd_mode_o = {1'b0, instr_rdata_i[13:12]};
@@ -4321,34 +4360,35 @@ module cv32e40p_decoder (
 						end
 						5'b01000: begin
 							regb_used_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(10);
+							fpu_op = sv2v_cast_FEEA0(10);
 							fp_op_group = 2'd3;
 							if (instr_rdata_i[24:23])
 								illegal_insn_o = 1'b1;
+							(* full_case, parallel_case *)
 							case (instr_rdata_i[22:20])
 								3'b000: begin
 									illegal_insn_o = 1'b1;
-									fpu_src_fmt_o = sv2v_cast_59BD5('d0);
+									fpu_src_fmt_o = sv2v_cast_8141C('d0);
 								end
 								3'b001: begin
 									if (~cv32e40p_pkg_C_RVD)
 										illegal_insn_o = 1'b1;
-									fpu_src_fmt_o = sv2v_cast_59BD5('d1);
+									fpu_src_fmt_o = sv2v_cast_8141C('d1);
 								end
 								3'b010: begin
 									if (~cv32e40p_pkg_C_XF16)
 										illegal_insn_o = 1'b1;
-									fpu_src_fmt_o = sv2v_cast_59BD5('d2);
+									fpu_src_fmt_o = sv2v_cast_8141C('d2);
 								end
 								3'b110: begin
 									if (~cv32e40p_pkg_C_XF16ALT)
 										illegal_insn_o = 1'b1;
-									fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+									fpu_src_fmt_o = sv2v_cast_8141C('d4);
 								end
 								3'b011: begin
 									if (~cv32e40p_pkg_C_XF8)
 										illegal_insn_o = 1'b1;
-									fpu_src_fmt_o = sv2v_cast_59BD5('d3);
+									fpu_src_fmt_o = sv2v_cast_8141C('d3);
 								end
 								default: illegal_insn_o = 1'b1;
 							endcase
@@ -4356,9 +4396,9 @@ module cv32e40p_decoder (
 						5'b01001: begin
 							if ((~cv32e40p_pkg_C_XF16 && ~cv32e40p_pkg_C_XF16ALT) && ~cv32e40p_pkg_C_XF8)
 								illegal_insn_o = 1;
-							fpu_op = sv2v_cast_EC9D9(3);
+							fpu_op = sv2v_cast_FEEA0(3);
 							fp_op_group = 2'd0;
-							fpu_dst_fmt_o = sv2v_cast_59BD5('d0);
+							fpu_dst_fmt_o = sv2v_cast_8141C('d0);
 						end
 						5'b01010: begin
 							if ((~cv32e40p_pkg_C_XF16 && ~cv32e40p_pkg_C_XF16ALT) && ~cv32e40p_pkg_C_XF8)
@@ -4369,12 +4409,12 @@ module cv32e40p_decoder (
 								reg_fp_c_o = 1'b1;
 							else
 								reg_fp_c_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(0);
+							fpu_op = sv2v_cast_FEEA0(0);
 							fp_op_group = 2'd0;
-							fpu_dst_fmt_o = sv2v_cast_59BD5('d0);
+							fpu_dst_fmt_o = sv2v_cast_8141C('d0);
 						end
 						5'b10100: begin
-							fpu_op = sv2v_cast_EC9D9(8);
+							fpu_op = sv2v_cast_FEEA0(8);
 							fp_op_group = 2'd2;
 							reg_fp_d_o = 1'b0;
 							check_fprm = 1'b0;
@@ -4382,8 +4422,8 @@ module cv32e40p_decoder (
 								if (!(|{(3'b000 <= instr_rdata_i[14:12]) && (3'b010 >= instr_rdata_i[14:12]), (3'b100 <= instr_rdata_i[14:12]) && (3'b110 >= instr_rdata_i[14:12])}))
 									illegal_insn_o = 1'b1;
 								if (instr_rdata_i[14]) begin
-									fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
-									fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+									fpu_dst_fmt_o = sv2v_cast_8141C('d4);
+									fpu_src_fmt_o = sv2v_cast_8141C('d4);
 								end
 								else
 									fp_rnd_mode_o = {1'b0, instr_rdata_i[13:12]};
@@ -4394,37 +4434,37 @@ module cv32e40p_decoder (
 						5'b11000: begin
 							regb_used_o = 1'b0;
 							reg_fp_d_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(11);
+							fpu_op = sv2v_cast_FEEA0(11);
 							fp_op_group = 2'd3;
 							fpu_op_mod = instr_rdata_i[20];
-							apu_op_o = 2'b01;
+							(* full_case, parallel_case *)
 							case (instr_rdata_i[26:25])
 								2'b00:
 									if (~cv32e40p_pkg_C_RVF)
 										illegal_insn_o = 1;
 									else
-										fpu_src_fmt_o = sv2v_cast_59BD5('d0);
+										fpu_src_fmt_o = sv2v_cast_8141C('d0);
 								2'b01:
 									if (~cv32e40p_pkg_C_RVD)
 										illegal_insn_o = 1;
 									else
-										fpu_src_fmt_o = sv2v_cast_59BD5('d1);
+										fpu_src_fmt_o = sv2v_cast_8141C('d1);
 								2'b10:
 									if (instr_rdata_i[14:12] == 3'b101) begin
 										if (~cv32e40p_pkg_C_XF16ALT)
 											illegal_insn_o = 1;
 										else
-											fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+											fpu_src_fmt_o = sv2v_cast_8141C('d4);
 									end
 									else if (~cv32e40p_pkg_C_XF16)
 										illegal_insn_o = 1;
 									else
-										fpu_src_fmt_o = sv2v_cast_59BD5('d2);
+										fpu_src_fmt_o = sv2v_cast_8141C('d2);
 								2'b11:
 									if (~cv32e40p_pkg_C_XF8)
 										illegal_insn_o = 1;
 									else
-										fpu_src_fmt_o = sv2v_cast_59BD5('d3);
+										fpu_src_fmt_o = sv2v_cast_8141C('d3);
 							endcase
 							if (instr_rdata_i[24:21])
 								illegal_insn_o = 1'b1;
@@ -4432,10 +4472,9 @@ module cv32e40p_decoder (
 						5'b11010: begin
 							regb_used_o = 1'b0;
 							reg_fp_a_o = 1'b0;
-							fpu_op = sv2v_cast_EC9D9(12);
+							fpu_op = sv2v_cast_FEEA0(12);
 							fp_op_group = 2'd3;
 							fpu_op_mod = instr_rdata_i[20];
-							apu_op_o = 2'b00;
 							if (instr_rdata_i[24:21])
 								illegal_insn_o = 1'b1;
 						end
@@ -4446,20 +4485,20 @@ module cv32e40p_decoder (
 							check_fprm = 1'b0;
 							if (((ZFINX == 0) && (instr_rdata_i[14:12] == 3'b000)) || 1'd0) begin
 								alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
-								fpu_op = sv2v_cast_EC9D9(6);
+								fpu_op = sv2v_cast_FEEA0(6);
 								fpu_op_mod = 1'b1;
 								fp_rnd_mode_o = 3'b011;
 								if (instr_rdata_i[14]) begin
-									fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
-									fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+									fpu_dst_fmt_o = sv2v_cast_8141C('d4);
+									fpu_src_fmt_o = sv2v_cast_8141C('d4);
 								end
 							end
 							else if ((instr_rdata_i[14:12] == 3'b001) || 1'd0) begin
-								fpu_op = sv2v_cast_EC9D9(9);
+								fpu_op = sv2v_cast_FEEA0(9);
 								fp_rnd_mode_o = 3'b000;
 								if (instr_rdata_i[14]) begin
-									fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
-									fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+									fpu_dst_fmt_o = sv2v_cast_8141C('d4);
+									fpu_src_fmt_o = sv2v_cast_8141C('d4);
 								end
 							end
 							else
@@ -4471,15 +4510,15 @@ module cv32e40p_decoder (
 							regb_used_o = 1'b0;
 							reg_fp_a_o = 1'b0;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
-							fpu_op = sv2v_cast_EC9D9(6);
+							fpu_op = sv2v_cast_FEEA0(6);
 							fpu_op_mod = 1'b0;
 							fp_op_group = 2'd2;
 							fp_rnd_mode_o = 3'b011;
 							check_fprm = 1'b0;
 							if (((ZFINX == 0) && (instr_rdata_i[14:12] == 3'b000)) || 1'd0) begin
 								if (instr_rdata_i[14]) begin
-									fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
-									fpu_src_fmt_o = sv2v_cast_59BD5('d4);
+									fpu_dst_fmt_o = sv2v_cast_8141C('d4);
+									fpu_src_fmt_o = sv2v_cast_8141C('d4);
 								end
 							end
 							else
@@ -4489,29 +4528,32 @@ module cv32e40p_decoder (
 						end
 						default: illegal_insn_o = 1'b1;
 					endcase
-					if (~cv32e40p_pkg_C_RVF && (fpu_dst_fmt_o == sv2v_cast_59BD5('d0)))
+					if (~cv32e40p_pkg_C_RVF && (fpu_dst_fmt_o == sv2v_cast_8141C('d0)))
 						illegal_insn_o = 1'b1;
-					if (~cv32e40p_pkg_C_RVD && (fpu_dst_fmt_o == sv2v_cast_59BD5('d1)))
+					if (~cv32e40p_pkg_C_RVD && (fpu_dst_fmt_o == sv2v_cast_8141C('d1)))
 						illegal_insn_o = 1'b1;
-					if (~cv32e40p_pkg_C_XF16 && (fpu_dst_fmt_o == sv2v_cast_59BD5('d2)))
+					if (~cv32e40p_pkg_C_XF16 && (fpu_dst_fmt_o == sv2v_cast_8141C('d2)))
 						illegal_insn_o = 1'b1;
-					if (~cv32e40p_pkg_C_XF16ALT && (fpu_dst_fmt_o == sv2v_cast_59BD5('d4)))
+					if (~cv32e40p_pkg_C_XF16ALT && (fpu_dst_fmt_o == sv2v_cast_8141C('d4)))
 						illegal_insn_o = 1'b1;
-					if (~cv32e40p_pkg_C_XF8 && (fpu_dst_fmt_o == sv2v_cast_59BD5('d3)))
+					if (~cv32e40p_pkg_C_XF8 && (fpu_dst_fmt_o == sv2v_cast_8141C('d3)))
 						illegal_insn_o = 1'b1;
 					if (check_fprm) begin
-						if ((3'b000 <= instr_rdata_i[14:12]) && (3'b100 >= instr_rdata_i[14:12]))
+						(* full_case, parallel_case *)
+						if (|{instr_rdata_i[14:12] == 3'b000, instr_rdata_i[14:12] == 3'b001, instr_rdata_i[14:12] == 3'b010, instr_rdata_i[14:12] == 3'b011, instr_rdata_i[14:12] == 3'b100})
 							;
 						else if (instr_rdata_i[14:12] == 3'b101) begin
-							if (~cv32e40p_pkg_C_XF16ALT || (fpu_dst_fmt_o != sv2v_cast_59BD5('d4)))
+							if (~cv32e40p_pkg_C_XF16ALT || (fpu_dst_fmt_o != sv2v_cast_8141C('d4)))
 								illegal_insn_o = 1'b1;
-							if ((3'b000 <= frm_i) && (3'b100 >= frm_i))
+							(* full_case, parallel_case *)
+							if (|{frm_i == 3'b000, frm_i == 3'b001, frm_i == 3'b010, frm_i == 3'b011, frm_i == 3'b100})
 								fp_rnd_mode_o = frm_i;
 							else
 								illegal_insn_o = 1'b1;
 						end
 						else if (instr_rdata_i[14:12] == 3'b111) begin
-							if ((3'b000 <= frm_i) && (3'b100 >= frm_i))
+							(* full_case, parallel_case *)
+							if (|{frm_i == 3'b000, frm_i == 3'b001, frm_i == 3'b010, frm_i == 3'b011, frm_i == 3'b100})
 								fp_rnd_mode_o = frm_i;
 							else
 								illegal_insn_o = 1'b1;
@@ -4521,18 +4563,21 @@ module cv32e40p_decoder (
 					end
 					case (fp_op_group)
 						2'd0:
+							(* full_case, parallel_case *)
 							case (fpu_dst_fmt_o)
-								sv2v_cast_59BD5('d0): apu_lat_o = (FPU_ADDMUL_LAT < 2 ? FPU_ADDMUL_LAT + 1 : 2'h3);
-								sv2v_cast_59BD5('d1): apu_lat_o = 1;
-								sv2v_cast_59BD5('d2): apu_lat_o = 1;
-								sv2v_cast_59BD5('d4): apu_lat_o = 1;
-								sv2v_cast_59BD5('d3): apu_lat_o = 1;
+								sv2v_cast_8141C('d0): apu_lat_o = (FPU_ADDMUL_LAT < 2 ? FPU_ADDMUL_LAT + 1 : 2'h3);
+								sv2v_cast_8141C('d1): apu_lat_o = 1;
+								sv2v_cast_8141C('d2): apu_lat_o = 1;
+								sv2v_cast_8141C('d4): apu_lat_o = 1;
+								sv2v_cast_8141C('d3): apu_lat_o = 1;
 								default:
 									;
 							endcase
 						2'd1: apu_lat_o = 2'h3;
 						2'd2: apu_lat_o = (FPU_OTHERS_LAT < 2 ? FPU_OTHERS_LAT + 1 : 2'h3);
 						2'd3: apu_lat_o = (FPU_OTHERS_LAT < 2 ? FPU_OTHERS_LAT + 1 : 2'h3);
+						default:
+							;
 					endcase
 					apu_op_o = {fpu_vec_op, fpu_op_mod, fpu_op};
 				end
@@ -4559,73 +4604,71 @@ module cv32e40p_decoder (
 						reg_fp_d_o = 1'b0;
 					end
 					fp_rnd_mode_o = instr_rdata_i[14:12];
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[26:25])
-						2'b00: fpu_dst_fmt_o = sv2v_cast_59BD5('d0);
-						2'b01: fpu_dst_fmt_o = sv2v_cast_59BD5('d1);
+						2'b00: fpu_dst_fmt_o = sv2v_cast_8141C('d0);
+						2'b01: fpu_dst_fmt_o = sv2v_cast_8141C('d1);
 						2'b10:
 							if (instr_rdata_i[14:12] == 3'b101)
-								fpu_dst_fmt_o = sv2v_cast_59BD5('d4);
+								fpu_dst_fmt_o = sv2v_cast_8141C('d4);
 							else
-								fpu_dst_fmt_o = sv2v_cast_59BD5('d2);
-						2'b11: fpu_dst_fmt_o = sv2v_cast_59BD5('d3);
+								fpu_dst_fmt_o = sv2v_cast_8141C('d2);
+						2'b11: fpu_dst_fmt_o = sv2v_cast_8141C('d3);
 					endcase
 					fpu_src_fmt_o = fpu_dst_fmt_o;
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[6:0])
-						cv32e40p_pkg_OPCODE_OP_FMADD: begin
-							fpu_op = sv2v_cast_EC9D9(0);
-							apu_op_o = 2'b00;
-						end
+						cv32e40p_pkg_OPCODE_OP_FMADD: fpu_op = sv2v_cast_FEEA0(0);
 						cv32e40p_pkg_OPCODE_OP_FMSUB: begin
-							fpu_op = sv2v_cast_EC9D9(0);
+							fpu_op = sv2v_cast_FEEA0(0);
 							fpu_op_mod = 1'b1;
-							apu_op_o = 2'b01;
 						end
-						cv32e40p_pkg_OPCODE_OP_FNMSUB: begin
-							fpu_op = sv2v_cast_EC9D9(1);
-							apu_op_o = 2'b10;
-						end
+						cv32e40p_pkg_OPCODE_OP_FNMSUB: fpu_op = sv2v_cast_FEEA0(1);
 						cv32e40p_pkg_OPCODE_OP_FNMADD: begin
-							fpu_op = sv2v_cast_EC9D9(1);
+							fpu_op = sv2v_cast_FEEA0(1);
 							fpu_op_mod = 1'b1;
-							apu_op_o = 2'b11;
 						end
 						default:
 							;
 					endcase
-					if (~cv32e40p_pkg_C_RVF && (fpu_dst_fmt_o == sv2v_cast_59BD5('d0)))
+					if (~cv32e40p_pkg_C_RVF && (fpu_dst_fmt_o == sv2v_cast_8141C('d0)))
 						illegal_insn_o = 1'b1;
-					if (~cv32e40p_pkg_C_RVD && (fpu_dst_fmt_o == sv2v_cast_59BD5('d1)))
+					if (~cv32e40p_pkg_C_RVD && (fpu_dst_fmt_o == sv2v_cast_8141C('d1)))
 						illegal_insn_o = 1'b1;
-					if (~cv32e40p_pkg_C_XF16 && (fpu_dst_fmt_o == sv2v_cast_59BD5('d2)))
+					if (~cv32e40p_pkg_C_XF16 && (fpu_dst_fmt_o == sv2v_cast_8141C('d2)))
 						illegal_insn_o = 1'b1;
-					if (~cv32e40p_pkg_C_XF16ALT && (fpu_dst_fmt_o == sv2v_cast_59BD5('d4)))
+					if (~cv32e40p_pkg_C_XF16ALT && (fpu_dst_fmt_o == sv2v_cast_8141C('d4)))
 						illegal_insn_o = 1'b1;
-					if (~cv32e40p_pkg_C_XF8 && (fpu_dst_fmt_o == sv2v_cast_59BD5('d3)))
+					if (~cv32e40p_pkg_C_XF8 && (fpu_dst_fmt_o == sv2v_cast_8141C('d3)))
 						illegal_insn_o = 1'b1;
-					if ((3'b000 <= instr_rdata_i[14:12]) && (3'b100 >= instr_rdata_i[14:12]))
+					(* full_case, parallel_case *)
+					if (|{instr_rdata_i[14:12] == 3'b000, instr_rdata_i[14:12] == 3'b001, instr_rdata_i[14:12] == 3'b010, instr_rdata_i[14:12] == 3'b011, instr_rdata_i[14:12] == 3'b100})
 						;
 					else if (instr_rdata_i[14:12] == 3'b101) begin
-						if (~cv32e40p_pkg_C_XF16ALT || (fpu_dst_fmt_o != sv2v_cast_59BD5('d4)))
+						if (~cv32e40p_pkg_C_XF16ALT || (fpu_dst_fmt_o != sv2v_cast_8141C('d4)))
 							illegal_insn_o = 1'b1;
-						if ((3'b000 <= frm_i) && (3'b100 >= frm_i))
+						(* full_case, parallel_case *)
+						if (|{frm_i == 3'b000, frm_i == 3'b001, frm_i == 3'b010, frm_i == 3'b011, frm_i == 3'b100})
 							fp_rnd_mode_o = frm_i;
 						else
 							illegal_insn_o = 1'b1;
 					end
 					else if (instr_rdata_i[14:12] == 3'b111) begin
-						if ((3'b000 <= frm_i) && (3'b100 >= frm_i))
+						(* full_case, parallel_case *)
+						if (|{frm_i == 3'b000, frm_i == 3'b001, frm_i == 3'b010, frm_i == 3'b011, frm_i == 3'b100})
 							fp_rnd_mode_o = frm_i;
 						else
 							illegal_insn_o = 1'b1;
 					end
 					else
 						illegal_insn_o = 1'b1;
+					(* full_case, parallel_case *)
 					case (fpu_dst_fmt_o)
-						sv2v_cast_59BD5('d0): apu_lat_o = (FPU_ADDMUL_LAT < 2 ? FPU_ADDMUL_LAT + 1 : 2'h3);
-						sv2v_cast_59BD5('d1): apu_lat_o = 1;
-						sv2v_cast_59BD5('d2): apu_lat_o = 1;
-						sv2v_cast_59BD5('d4): apu_lat_o = 1;
-						sv2v_cast_59BD5('d3): apu_lat_o = 1;
+						sv2v_cast_8141C('d0): apu_lat_o = (FPU_ADDMUL_LAT < 2 ? FPU_ADDMUL_LAT + 1 : 2'h3);
+						sv2v_cast_8141C('d1): apu_lat_o = 1;
+						sv2v_cast_8141C('d2): apu_lat_o = 1;
+						sv2v_cast_8141C('d4): apu_lat_o = 1;
+						sv2v_cast_8141C('d3): apu_lat_o = 1;
 						default:
 							;
 					endcase
@@ -4639,11 +4682,12 @@ module cv32e40p_decoder (
 					data_we_o = 1'b1;
 					rega_used_o = 1'b1;
 					regb_used_o = 1'b1;
-					alu_operator_o = sv2v_cast_576C1(7'b0011000);
+					alu_operator_o = sv2v_cast_81146(7'b0011000);
 					reg_fp_b_o = 1'b1;
 					imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S;
 					alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 					alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_REGB_OR_FWD;
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[14:12])
 						3'b000:
 							if (cv32e40p_pkg_C_XF8)
@@ -4680,10 +4724,11 @@ module cv32e40p_decoder (
 					regfile_mem_we = 1'b1;
 					reg_fp_d_o = 1'b1;
 					rega_used_o = 1'b1;
-					alu_operator_o = sv2v_cast_576C1(7'b0011000);
+					alu_operator_o = sv2v_cast_81146(7'b0011000);
 					imm_b_mux_sel_o = cv32e40p_pkg_IMMB_I;
 					alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 					data_sign_extension_o = 2'b10;
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[14:12])
 						3'b000:
 							if (cv32e40p_pkg_C_XF8)
@@ -4715,7 +4760,7 @@ module cv32e40p_decoder (
 					data_req = 1'b1;
 					regfile_mem_we = 1'b1;
 					rega_used_o = 1'b1;
-					alu_operator_o = sv2v_cast_576C1(7'b0011000);
+					alu_operator_o = sv2v_cast_81146(7'b0011000);
 					alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 					imm_b_mux_sel_o = cv32e40p_pkg_IMMB_I;
 					if (instr_rdata_i[13:12] != 2'b11) begin
@@ -4724,6 +4769,7 @@ module cv32e40p_decoder (
 						regfile_alu_we = 1'b1;
 					end
 					data_sign_extension_o = {1'b0, ~instr_rdata_i[14]};
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[13:12])
 						2'b00: data_type_o = 2'b10;
 						2'b01: data_type_o = 2'b01;
@@ -4744,27 +4790,29 @@ module cv32e40p_decoder (
 					alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 					imm_b_mux_sel_o = cv32e40p_pkg_IMMB_BI;
 					if (instr_rdata_i[12] == 1'b0)
-						alu_operator_o = sv2v_cast_576C1(7'b0001100);
+						alu_operator_o = sv2v_cast_81146(7'b0001100);
 					else
-						alu_operator_o = sv2v_cast_576C1(7'b0001101);
+						alu_operator_o = sv2v_cast_81146(7'b0001101);
 				end
 				else
 					illegal_insn_o = 1'b1;
 			cv32e40p_pkg_OPCODE_CUSTOM_1:
 				if (COREV_PULP)
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[14:12])
 						3'b000, 3'b001, 3'b010: begin
 							data_req = 1'b1;
 							data_we_o = 1'b1;
 							rega_used_o = 1'b1;
 							regb_used_o = 1'b1;
-							alu_operator_o = sv2v_cast_576C1(7'b0011000);
+							alu_operator_o = sv2v_cast_81146(7'b0011000);
 							alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_REGB_OR_FWD;
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 							prepost_useincr_o = 1'b0;
 							regfile_alu_waddr_sel_o = 1'b0;
 							regfile_alu_we = 1'b1;
+							(* full_case, parallel_case *)
 							case (instr_rdata_i[13:12])
 								2'b00: data_type_o = 2'b10;
 								2'b01: data_type_o = 2'b01;
@@ -4772,12 +4820,13 @@ module cv32e40p_decoder (
 							endcase
 						end
 						3'b011:
+							(* full_case, parallel_case *)
 							case (instr_rdata_i[31:25])
 								7'b0000000, 7'b0000001, 7'b0000010, 7'b0000011, 7'b0000100, 7'b0000101, 7'b0000110, 7'b0000111, 7'b0001000, 7'b0001001, 7'b0001010, 7'b0001011, 7'b0001100, 7'b0001101, 7'b0001110, 7'b0001111: begin
 									data_req = 1'b1;
 									regfile_mem_we = 1'b1;
 									rega_used_o = 1'b1;
-									alu_operator_o = sv2v_cast_576C1(7'b0011000);
+									alu_operator_o = sv2v_cast_81146(7'b0011000);
 									regb_used_o = 1'b1;
 									alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGB_OR_FWD;
 									if (instr_rdata_i[27] == 1'b0) begin
@@ -4786,6 +4835,7 @@ module cv32e40p_decoder (
 										regfile_alu_we = 1'b1;
 									end
 									data_sign_extension_o = {1'b0, ~instr_rdata_i[28]};
+									(* full_case, parallel_case *)
 									case ({instr_rdata_i[28], instr_rdata_i[26:25]})
 										3'b000: data_type_o = 2'b10;
 										3'b001: data_type_o = 2'b01;
@@ -4805,7 +4855,7 @@ module cv32e40p_decoder (
 									data_we_o = 1'b1;
 									rega_used_o = 1'b1;
 									regb_used_o = 1'b1;
-									alu_operator_o = sv2v_cast_576C1(7'b0011000);
+									alu_operator_o = sv2v_cast_81146(7'b0011000);
 									alu_op_c_mux_sel_o = cv32e40p_pkg_OP_C_REGB_OR_FWD;
 									regc_used_o = 1'b1;
 									alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGC_OR_FWD;
@@ -4815,6 +4865,7 @@ module cv32e40p_decoder (
 										regfile_alu_waddr_sel_o = 1'b0;
 										regfile_alu_we = 1'b1;
 									end
+									(* full_case, parallel_case *)
 									case (instr_rdata_i[26:25])
 										2'b00: data_type_o = 2'b10;
 										2'b01: data_type_o = 2'b01;
@@ -4835,21 +4886,22 @@ module cv32e40p_decoder (
 									bmask_b_mux_o = cv32e40p_pkg_BMASK_B_S2;
 									alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 									alu_bmask_a_mux_sel_o = cv32e40p_pkg_BMASK_A_REG;
+									(* full_case, parallel_case *)
 									case (instr_rdata_i[27:25])
 										3'b000: begin
-											alu_operator_o = sv2v_cast_576C1(7'b0101000);
+											alu_operator_o = sv2v_cast_81146(7'b0101000);
 											imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S2;
 											bmask_b_mux_o = cv32e40p_pkg_BMASK_B_ZERO;
 											alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_BMASK;
 										end
 										3'b001: begin
-											alu_operator_o = sv2v_cast_576C1(7'b0101001);
+											alu_operator_o = sv2v_cast_81146(7'b0101001);
 											imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S2;
 											bmask_b_mux_o = cv32e40p_pkg_BMASK_B_ZERO;
 											alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_BMASK;
 										end
 										3'b010: begin
-											alu_operator_o = sv2v_cast_576C1(7'b0101010);
+											alu_operator_o = sv2v_cast_81146(7'b0101010);
 											imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S2;
 											regc_used_o = 1'b1;
 											regc_mux_o = cv32e40p_pkg_REGC_RD;
@@ -4857,11 +4909,11 @@ module cv32e40p_decoder (
 											alu_bmask_b_mux_sel_o = cv32e40p_pkg_BMASK_B_REG;
 										end
 										3'b100: begin
-											alu_operator_o = sv2v_cast_576C1(7'b0101011);
+											alu_operator_o = sv2v_cast_81146(7'b0101011);
 											alu_bmask_b_mux_sel_o = cv32e40p_pkg_BMASK_B_REG;
 										end
 										3'b101: begin
-											alu_operator_o = sv2v_cast_576C1(7'b0101100);
+											alu_operator_o = sv2v_cast_81146(7'b0101100);
 											alu_bmask_b_mux_sel_o = cv32e40p_pkg_BMASK_B_REG;
 										end
 										default: illegal_insn_o = 1'b1;
@@ -4871,85 +4923,86 @@ module cv32e40p_decoder (
 									regfile_alu_we = 1'b1;
 									rega_used_o = 1'b1;
 									regb_used_o = 1'b1;
+									(* full_case, parallel_case *)
 									case (instr_rdata_i[29:25])
-										5'b00000: alu_operator_o = sv2v_cast_576C1(7'b0100110);
+										5'b00000: alu_operator_o = sv2v_cast_81146(7'b0100110);
 										5'b00001: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0110110);
+											alu_operator_o = sv2v_cast_81146(7'b0110110);
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
 										5'b00010: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0110111);
+											alu_operator_o = sv2v_cast_81146(7'b0110111);
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
 										5'b00011: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0110101);
+											alu_operator_o = sv2v_cast_81146(7'b0110101);
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
 										5'b00100: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0110100);
+											alu_operator_o = sv2v_cast_81146(7'b0110100);
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
 										5'b01000: begin
-											alu_operator_o = sv2v_cast_576C1(7'b0010100);
+											alu_operator_o = sv2v_cast_81146(7'b0010100);
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
-										5'b01001: alu_operator_o = sv2v_cast_576C1(7'b0000110);
-										5'b01010: alu_operator_o = sv2v_cast_576C1(7'b0000111);
-										5'b01011: alu_operator_o = sv2v_cast_576C1(7'b0010000);
-										5'b01100: alu_operator_o = sv2v_cast_576C1(7'b0010001);
-										5'b01101: alu_operator_o = sv2v_cast_576C1(7'b0010010);
-										5'b01110: alu_operator_o = sv2v_cast_576C1(7'b0010011);
+										5'b01001: alu_operator_o = sv2v_cast_81146(7'b0000110);
+										5'b01010: alu_operator_o = sv2v_cast_81146(7'b0000111);
+										5'b01011: alu_operator_o = sv2v_cast_81146(7'b0010000);
+										5'b01100: alu_operator_o = sv2v_cast_81146(7'b0010001);
+										5'b01101: alu_operator_o = sv2v_cast_81146(7'b0010010);
+										5'b01110: alu_operator_o = sv2v_cast_81146(7'b0010011);
 										5'b10000: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0111110);
+											alu_operator_o = sv2v_cast_81146(7'b0111110);
 											alu_vec_mode_o = cv32e40p_pkg_VEC_MODE16;
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
 										5'b10001: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0111111);
+											alu_operator_o = sv2v_cast_81146(7'b0111111);
 											alu_vec_mode_o = cv32e40p_pkg_VEC_MODE16;
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
 										5'b10010: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0111110);
+											alu_operator_o = sv2v_cast_81146(7'b0111110);
 											alu_vec_mode_o = cv32e40p_pkg_VEC_MODE8;
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
 										5'b10011: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0111111);
+											alu_operator_o = sv2v_cast_81146(7'b0111111);
 											alu_vec_mode_o = cv32e40p_pkg_VEC_MODE8;
 											if (instr_rdata_i[24:20] != 5'b00000)
 												illegal_insn_o = 1'b1;
 										end
 										5'b11000: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0010110);
+											alu_operator_o = sv2v_cast_81146(7'b0010110);
 											alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 											imm_b_mux_sel_o = cv32e40p_pkg_IMMB_CLIP;
 										end
 										5'b11001: begin
 											regb_used_o = 1'b0;
-											alu_operator_o = sv2v_cast_576C1(7'b0010111);
+											alu_operator_o = sv2v_cast_81146(7'b0010111);
 											alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 											imm_b_mux_sel_o = cv32e40p_pkg_IMMB_CLIP;
 										end
-										5'b11010: alu_operator_o = sv2v_cast_576C1(7'b0010110);
-										5'b11011: alu_operator_o = sv2v_cast_576C1(7'b0010111);
+										5'b11010: alu_operator_o = sv2v_cast_81146(7'b0010110);
+										5'b11011: alu_operator_o = sv2v_cast_81146(7'b0010111);
 										default: illegal_insn_o = 1'b1;
 									endcase
 								end
@@ -4964,16 +5017,16 @@ module cv32e40p_decoder (
 									alu_bmask_b_mux_sel_o = cv32e40p_pkg_BMASK_B_REG;
 									alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_REGC_OR_FWD;
 									alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGA_OR_FWD;
+									(* full_case, parallel_case *)
 									case (instr_rdata_i[27:25])
-										3'b000: alu_operator_o = sv2v_cast_576C1(7'b0011000);
-										3'b001: alu_operator_o = sv2v_cast_576C1(7'b0011010);
-										3'b010: alu_operator_o = sv2v_cast_576C1(7'b0011100);
-										3'b011: alu_operator_o = sv2v_cast_576C1(7'b0011110);
-										3'b100: alu_operator_o = sv2v_cast_576C1(7'b0011001);
-										3'b101: alu_operator_o = sv2v_cast_576C1(7'b0011011);
-										3'b110: alu_operator_o = sv2v_cast_576C1(7'b0011101);
-										3'b111: alu_operator_o = sv2v_cast_576C1(7'b0011111);
-										default: alu_operator_o = sv2v_cast_576C1(7'b0011000);
+										3'b001: alu_operator_o = sv2v_cast_81146(7'b0011010);
+										3'b010: alu_operator_o = sv2v_cast_81146(7'b0011100);
+										3'b011: alu_operator_o = sv2v_cast_81146(7'b0011110);
+										3'b100: alu_operator_o = sv2v_cast_81146(7'b0011001);
+										3'b101: alu_operator_o = sv2v_cast_81146(7'b0011011);
+										3'b110: alu_operator_o = sv2v_cast_81146(7'b0011101);
+										3'b111: alu_operator_o = sv2v_cast_81146(7'b0011111);
+										default: alu_operator_o = sv2v_cast_81146(7'b0011000);
 									endcase
 								end
 								7'b1001000, 7'b1001001: begin
@@ -4985,14 +5038,15 @@ module cv32e40p_decoder (
 									regc_used_o = 1'b1;
 									regc_mux_o = cv32e40p_pkg_REGC_RD;
 									if (instr_rdata_i[25] == 1'b0)
-										mult_operator_o = sv2v_cast_9D1C7(3'b000);
+										mult_operator_o = sv2v_cast_F9F94(3'b000);
 									else
-										mult_operator_o = sv2v_cast_9D1C7(3'b001);
+										mult_operator_o = sv2v_cast_F9F94(3'b001);
 								end
 								default: illegal_insn_o = 1'b1;
 							endcase
 						3'b100: begin
 							hwlp_target_mux_sel_o = 2'b00;
+							(* full_case, parallel_case *)
 							case (instr_rdata_i[11:8])
 								4'b0000: begin
 									hwlp_we[0] = 1'b1;
@@ -5056,33 +5110,35 @@ module cv32e40p_decoder (
 					regfile_alu_we = 1'b1;
 					rega_used_o = 1'b1;
 					regb_used_o = 1'b1;
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[14:13])
 						2'b00: begin
 							regb_used_o = 1'b0;
 							bmask_a_mux_o = cv32e40p_pkg_BMASK_A_S3;
 							bmask_b_mux_o = cv32e40p_pkg_BMASK_B_S2;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
+							(* full_case, parallel_case *)
 							case ({instr_rdata_i[31:30], instr_rdata_i[12]})
 								3'b000: begin
-									alu_operator_o = sv2v_cast_576C1(7'b0101000);
+									alu_operator_o = sv2v_cast_81146(7'b0101000);
 									imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S2;
 									bmask_b_mux_o = cv32e40p_pkg_BMASK_B_ZERO;
 								end
 								3'b010: begin
-									alu_operator_o = sv2v_cast_576C1(7'b0101001);
+									alu_operator_o = sv2v_cast_81146(7'b0101001);
 									imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S2;
 									bmask_b_mux_o = cv32e40p_pkg_BMASK_B_ZERO;
 								end
 								3'b100: begin
-									alu_operator_o = sv2v_cast_576C1(7'b0101010);
+									alu_operator_o = sv2v_cast_81146(7'b0101010);
 									imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S2;
 									regc_used_o = 1'b1;
 									regc_mux_o = cv32e40p_pkg_REGC_RD;
 								end
-								3'b001: alu_operator_o = sv2v_cast_576C1(7'b0101011);
-								3'b011: alu_operator_o = sv2v_cast_576C1(7'b0101100);
+								3'b001: alu_operator_o = sv2v_cast_81146(7'b0101011);
+								3'b011: alu_operator_o = sv2v_cast_81146(7'b0101100);
 								3'b111: begin
-									alu_operator_o = sv2v_cast_576C1(7'b1001001);
+									alu_operator_o = sv2v_cast_81146(7'b1001001);
 									regc_used_o = 1'b1;
 									regc_mux_o = cv32e40p_pkg_REGC_RD;
 									imm_b_mux_sel_o = cv32e40p_pkg_IMMB_S2;
@@ -5096,19 +5152,19 @@ module cv32e40p_decoder (
 						2'b01: begin
 							bmask_a_mux_o = cv32e40p_pkg_BMASK_A_ZERO;
 							bmask_b_mux_o = cv32e40p_pkg_BMASK_B_S3;
+							(* full_case, parallel_case *)
 							case ({instr_rdata_i[31:30], instr_rdata_i[12]})
-								3'b000: alu_operator_o = sv2v_cast_576C1(7'b0011000);
-								3'b010: alu_operator_o = sv2v_cast_576C1(7'b0011010);
-								3'b100: alu_operator_o = sv2v_cast_576C1(7'b0011100);
-								3'b110: alu_operator_o = sv2v_cast_576C1(7'b0011110);
-								3'b001: alu_operator_o = sv2v_cast_576C1(7'b0011001);
-								3'b011: alu_operator_o = sv2v_cast_576C1(7'b0011011);
-								3'b101: alu_operator_o = sv2v_cast_576C1(7'b0011101);
-								3'b111: alu_operator_o = sv2v_cast_576C1(7'b0011111);
-								default: alu_operator_o = sv2v_cast_576C1(7'b0011000);
+								3'b010: alu_operator_o = sv2v_cast_81146(7'b0011010);
+								3'b100: alu_operator_o = sv2v_cast_81146(7'b0011100);
+								3'b110: alu_operator_o = sv2v_cast_81146(7'b0011110);
+								3'b001: alu_operator_o = sv2v_cast_81146(7'b0011001);
+								3'b011: alu_operator_o = sv2v_cast_81146(7'b0011011);
+								3'b101: alu_operator_o = sv2v_cast_81146(7'b0011101);
+								3'b111: alu_operator_o = sv2v_cast_81146(7'b0011111);
+								default: alu_operator_o = sv2v_cast_81146(7'b0011000);
 							endcase
 						end
-						2'b10, 2'b11: begin
+						default: begin
 							alu_en = 1'b0;
 							mult_int_en = 1'b1;
 							mult_imm_mux_o = cv32e40p_pkg_MIMM_S3;
@@ -5121,11 +5177,10 @@ module cv32e40p_decoder (
 							else
 								regc_mux_o = cv32e40p_pkg_REGC_ZERO;
 							if (instr_rdata_i[31])
-								mult_operator_o = sv2v_cast_9D1C7(3'b011);
+								mult_operator_o = sv2v_cast_F9F94(3'b011);
 							else
-								mult_operator_o = sv2v_cast_9D1C7(3'b010);
+								mult_operator_o = sv2v_cast_F9F94(3'b010);
 						end
-						default: illegal_insn_o = 1'b1;
 					endcase
 				end
 				else
@@ -5138,11 +5193,11 @@ module cv32e40p_decoder (
 					alu_vec_o = 1'b1;
 					if (instr_rdata_i[12]) begin
 						alu_vec_mode_o = cv32e40p_pkg_VEC_MODE8;
-						mult_operator_o = sv2v_cast_9D1C7(3'b100);
+						mult_operator_o = sv2v_cast_F9F94(3'b100);
 					end
 					else begin
 						alu_vec_mode_o = cv32e40p_pkg_VEC_MODE16;
-						mult_operator_o = sv2v_cast_9D1C7(3'b101);
+						mult_operator_o = sv2v_cast_F9F94(3'b101);
 					end
 					if (instr_rdata_i[14]) begin
 						scalar_replication_o = 1'b1;
@@ -5153,9 +5208,10 @@ module cv32e40p_decoder (
 					end
 					else
 						regb_used_o = 1'b1;
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[31:26])
 						6'b000000: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0011000);
+							alu_operator_o = sv2v_cast_81146(7'b0011000);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5163,7 +5219,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b000010: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0011001);
+							alu_operator_o = sv2v_cast_81146(7'b0011001);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5171,7 +5227,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b000100: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0011000);
+							alu_operator_o = sv2v_cast_81146(7'b0011000);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							bmask_b_mux_o = cv32e40p_pkg_BMASK_B_ONE;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
@@ -5180,7 +5236,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b000110: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0011010);
+							alu_operator_o = sv2v_cast_81146(7'b0011010);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VU;
 							bmask_b_mux_o = cv32e40p_pkg_BMASK_B_ONE;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
@@ -5189,7 +5245,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b001000: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0010000);
+							alu_operator_o = sv2v_cast_81146(7'b0010000);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5197,7 +5253,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b001010: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0010001);
+							alu_operator_o = sv2v_cast_81146(7'b0010001);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VU;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5205,7 +5261,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b001100: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0010010);
+							alu_operator_o = sv2v_cast_81146(7'b0010010);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5213,7 +5269,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b001110: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0010011);
+							alu_operator_o = sv2v_cast_81146(7'b0010011);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VU;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5221,31 +5277,37 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b010000: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0100101);
+							alu_operator_o = sv2v_cast_81146(7'b0100101);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
 							if (((instr_rdata_i[14:12] != 3'b110) && (instr_rdata_i[14:12] != 3'b111)) && (instr_rdata_i[25] != 1'b0))
+								illegal_insn_o = 1'b1;
+							if (((instr_rdata_i[14:12] == 3'b110) && (instr_rdata_i[24:23] != 2'b00)) || ((instr_rdata_i[14:12] == 3'b111) && (instr_rdata_i[24:22] != 3'b000)))
 								illegal_insn_o = 1'b1;
 						end
 						6'b010010: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0100100);
+							alu_operator_o = sv2v_cast_81146(7'b0100100);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
 							if (((instr_rdata_i[14:12] != 3'b110) && (instr_rdata_i[14:12] != 3'b111)) && (instr_rdata_i[25] != 1'b0))
+								illegal_insn_o = 1'b1;
+							if (((instr_rdata_i[14:12] == 3'b110) && (instr_rdata_i[24:23] != 2'b00)) || ((instr_rdata_i[14:12] == 3'b111) && (instr_rdata_i[24:22] != 3'b000)))
 								illegal_insn_o = 1'b1;
 						end
 						6'b010100: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0100111);
+							alu_operator_o = sv2v_cast_81146(7'b0100111);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
 							if (((instr_rdata_i[14:12] != 3'b110) && (instr_rdata_i[14:12] != 3'b111)) && (instr_rdata_i[25] != 1'b0))
 								illegal_insn_o = 1'b1;
+							if (((instr_rdata_i[14:12] == 3'b110) && (instr_rdata_i[24:23] != 2'b00)) || ((instr_rdata_i[14:12] == 3'b111) && (instr_rdata_i[24:22] != 3'b000)))
+								illegal_insn_o = 1'b1;
 						end
 						6'b010110: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0101110);
+							alu_operator_o = sv2v_cast_81146(7'b0101110);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5253,7 +5315,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b011000: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0101111);
+							alu_operator_o = sv2v_cast_81146(7'b0101111);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5261,7 +5323,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b011010: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0010101);
+							alu_operator_o = sv2v_cast_81146(7'b0010101);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5269,7 +5331,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b011100: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0010100);
+							alu_operator_o = sv2v_cast_81146(7'b0010100);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] != 3'b000) && (instr_rdata_i[14:12] != 3'b001))
 								illegal_insn_o = 1'b1;
@@ -5338,20 +5400,24 @@ module cv32e40p_decoder (
 							if (((instr_rdata_i[14:12] != 3'b110) && (instr_rdata_i[14:12] != 3'b111)) && (instr_rdata_i[25] != 1'b0))
 								illegal_insn_o = 1'b1;
 						end
-						6'b101110:
+						6'b101110: begin
+							(* full_case, parallel_case *)
 							case (instr_rdata_i[14:13])
-								2'b00: alu_operator_o = sv2v_cast_576C1(7'b0111110);
-								2'b01: alu_operator_o = sv2v_cast_576C1(7'b0111111);
+								2'b00: alu_operator_o = sv2v_cast_81146(7'b0111110);
+								2'b01: alu_operator_o = sv2v_cast_81146(7'b0111111);
 								2'b10: begin
-									alu_operator_o = sv2v_cast_576C1(7'b0101101);
+									alu_operator_o = sv2v_cast_81146(7'b0101101);
 									regc_used_o = 1'b1;
 									regc_mux_o = cv32e40p_pkg_REGC_RD;
 									alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGC_OR_FWD;
 								end
 								default: illegal_insn_o = 1'b1;
 							endcase
+							if (((instr_rdata_i[12] == 1'b0) && (instr_rdata_i[24:20] != 5'b00000)) || ((instr_rdata_i[12] == 1'b1) && (instr_rdata_i[24:21] != 4'b0000)))
+								illegal_insn_o = 1'b1;
+						end
 						6'b110000: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0111010);
+							alu_operator_o = sv2v_cast_81146(7'b0111010);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_SHUF;
 							regb_used_o = 1'b1;
 							scalar_replication_o = 1'b0;
@@ -5359,9 +5425,11 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 							if (((instr_rdata_i[14:12] != 3'b110) && (instr_rdata_i[14:12] != 3'b111)) && (instr_rdata_i[25] != 1'b0))
 								illegal_insn_o = 1'b1;
+							if ((instr_rdata_i[14:12] == 3'b110) && (instr_rdata_i[24:21] != 4'b0000))
+								illegal_insn_o = 1'b1;
 						end
 						6'b110010, 6'b110100, 6'b110110: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0111010);
+							alu_operator_o = sv2v_cast_81146(7'b0111010);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_SHUF;
 							regb_used_o = 1'b1;
 							scalar_replication_o = 1'b0;
@@ -5369,7 +5437,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b111000: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0111011);
+							alu_operator_o = sv2v_cast_81146(7'b0111011);
 							regb_used_o = 1'b1;
 							regc_used_o = 1'b1;
 							regc_mux_o = cv32e40p_pkg_REGC_RD;
@@ -5380,13 +5448,13 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b111100: begin
-							alu_operator_o = (instr_rdata_i[25] ? sv2v_cast_576C1(7'b0111001) : sv2v_cast_576C1(7'b0111000));
+							alu_operator_o = (instr_rdata_i[25] ? sv2v_cast_81146(7'b0111001) : sv2v_cast_81146(7'b0111000));
 							regb_used_o = 1'b1;
 							if (instr_rdata_i[14:12] != 3'b000)
 								illegal_insn_o = 1'b1;
 						end
 						6'b111110: begin
-							alu_operator_o = (instr_rdata_i[25] ? sv2v_cast_576C1(7'b0111001) : sv2v_cast_576C1(7'b0111000));
+							alu_operator_o = (instr_rdata_i[25] ? sv2v_cast_81146(7'b0111001) : sv2v_cast_81146(7'b0111000));
 							regb_used_o = 1'b1;
 							regc_used_o = 1'b1;
 							regc_mux_o = cv32e40p_pkg_REGC_RD;
@@ -5394,7 +5462,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b000001: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0001100);
+							alu_operator_o = sv2v_cast_81146(7'b0001100);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5402,7 +5470,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b000011: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0001101);
+							alu_operator_o = sv2v_cast_81146(7'b0001101);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5410,7 +5478,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b000101: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0001000);
+							alu_operator_o = sv2v_cast_81146(7'b0001000);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5418,7 +5486,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b000111: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0001010);
+							alu_operator_o = sv2v_cast_81146(7'b0001010);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5426,7 +5494,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b001001: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0000000);
+							alu_operator_o = sv2v_cast_81146(7'b0000000);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5434,7 +5502,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b001011: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0000100);
+							alu_operator_o = sv2v_cast_81146(7'b0000100);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VS;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5442,7 +5510,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b001101: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0001001);
+							alu_operator_o = sv2v_cast_81146(7'b0001001);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VU;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5450,7 +5518,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b001111: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0001011);
+							alu_operator_o = sv2v_cast_81146(7'b0001011);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VU;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5458,7 +5526,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b010001: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0000001);
+							alu_operator_o = sv2v_cast_81146(7'b0000001);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VU;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5466,7 +5534,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b010011: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0000101);
+							alu_operator_o = sv2v_cast_81146(7'b0000101);
 							imm_b_mux_sel_o = cv32e40p_pkg_IMMB_VU;
 							if ((instr_rdata_i[14:12] == 3'b010) || (instr_rdata_i[14:12] == 3'b011))
 								illegal_insn_o = 1'b1;
@@ -5486,7 +5554,7 @@ module cv32e40p_decoder (
 							illegal_insn_o = instr_rdata_i[12];
 						end
 						6'b010111: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0010100);
+							alu_operator_o = sv2v_cast_81146(7'b0010100);
 							is_clpx_o = 1'b1;
 							scalar_replication_o = 1'b0;
 							regb_used_o = 1'b0;
@@ -5494,7 +5562,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b011001: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0011001);
+							alu_operator_o = sv2v_cast_81146(7'b0011001);
 							is_clpx_o = 1'b1;
 							scalar_replication_o = 1'b0;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGB_OR_FWD;
@@ -5504,7 +5572,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b011011: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0011000);
+							alu_operator_o = sv2v_cast_81146(7'b0011000);
 							is_clpx_o = 1'b1;
 							scalar_replication_o = 1'b0;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGB_OR_FWD;
@@ -5513,7 +5581,7 @@ module cv32e40p_decoder (
 								illegal_insn_o = 1'b1;
 						end
 						6'b011101: begin
-							alu_operator_o = sv2v_cast_576C1(7'b0011001);
+							alu_operator_o = sv2v_cast_81146(7'b0011001);
 							is_clpx_o = 1'b1;
 							scalar_replication_o = 1'b0;
 							alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_REGB_OR_FWD;
@@ -5527,6 +5595,7 @@ module cv32e40p_decoder (
 				else
 					illegal_insn_o = 1'b1;
 			cv32e40p_pkg_OPCODE_FENCE:
+				(* full_case, parallel_case *)
 				case (instr_rdata_i[14:12])
 					3'b000: fencei_insn_o = 1'b1;
 					3'b001: fencei_insn_o = 1'b1;
@@ -5535,6 +5604,7 @@ module cv32e40p_decoder (
 			cv32e40p_pkg_OPCODE_SYSTEM:
 				if (instr_rdata_i[14:12] == 3'b000) begin
 					if ({instr_rdata_i[19:15], instr_rdata_i[11:7]} == {10 {1'sb0}})
+						(* full_case, parallel_case *)
 						case (instr_rdata_i[31:20])
 							12'h000: ecall_insn_o = 1'b1;
 							12'h001: ebrk_insn_o = 1'b1;
@@ -5558,7 +5628,7 @@ module cv32e40p_decoder (
 								if (debug_wfi_no_sleep_i) begin
 									alu_op_b_mux_sel_o = cv32e40p_pkg_OP_B_IMM;
 									imm_b_mux_sel_o = cv32e40p_pkg_IMMB_I;
-									alu_operator_o = sv2v_cast_576C1(7'b0011000);
+									alu_operator_o = sv2v_cast_81146(7'b0011000);
 								end
 							end
 							default: illegal_insn_o = 1'b1;
@@ -5578,10 +5648,11 @@ module cv32e40p_decoder (
 						rega_used_o = 1'b1;
 						alu_op_a_mux_sel_o = cv32e40p_pkg_OP_A_REGA_OR_FWD;
 					end
+					(* full_case, parallel_case *)
 					case (instr_rdata_i[13:12])
-						2'b01: csr_op = sv2v_cast_315CD(2'b01);
-						2'b10: csr_op = (instr_rdata_i[19:15] == 5'b00000 ? sv2v_cast_315CD(2'b00) : sv2v_cast_315CD(2'b10));
-						2'b11: csr_op = (instr_rdata_i[19:15] == 5'b00000 ? sv2v_cast_315CD(2'b00) : sv2v_cast_315CD(2'b11));
+						2'b01: csr_op = sv2v_cast_8FA4C(2'b01);
+						2'b10: csr_op = (instr_rdata_i[19:15] == 5'b00000 ? sv2v_cast_8FA4C(2'b00) : sv2v_cast_8FA4C(2'b10));
+						2'b11: csr_op = (instr_rdata_i[19:15] == 5'b00000 ? sv2v_cast_8FA4C(2'b00) : sv2v_cast_8FA4C(2'b11));
 						default: csr_illegal = 1'b1;
 					endcase
 					if (instr_rdata_i[29:28] > current_priv_lvl_i)
@@ -5593,17 +5664,17 @@ module cv32e40p_decoder (
 						12'h002, 12'h003:
 							if ((FPU == 0) || (fs_off_i == 1'b1))
 								csr_illegal = 1'b1;
-							else if (csr_op != sv2v_cast_315CD(2'b00))
+							else if (csr_op != sv2v_cast_8FA4C(2'b00))
 								csr_status_o = 1'b1;
 						12'hf11, 12'hf12, 12'hf13, 12'hf14:
-							if (csr_op != sv2v_cast_315CD(2'b00))
+							if (csr_op != sv2v_cast_8FA4C(2'b00))
 								csr_illegal = 1'b1;
 						12'h300, 12'h341, 12'h305, 12'h342: csr_status_o = 1'b1;
 						12'h301, 12'h304, 12'h340, 12'h343, 12'h344:
 							;
 						12'hb00, 12'hb02, 12'hb03, 12'hb04, 12'hb05, 12'hb06, 12'hb07, 12'hb08, 12'hb09, 12'hb0a, 12'hb0b, 12'hb0c, 12'hb0d, 12'hb0e, 12'hb0f, 12'hb10, 12'hb11, 12'hb12, 12'hb13, 12'hb14, 12'hb15, 12'hb16, 12'hb17, 12'hb18, 12'hb19, 12'hb1a, 12'hb1b, 12'hb1c, 12'hb1d, 12'hb1e, 12'hb1f, 12'hb80, 12'hb82, 12'hb83, 12'hb84, 12'hb85, 12'hb86, 12'hb87, 12'hb88, 12'hb89, 12'hb8a, 12'hb8b, 12'hb8c, 12'hb8d, 12'hb8e, 12'hb8f, 12'hb90, 12'hb91, 12'hb92, 12'hb93, 12'hb94, 12'hb95, 12'hb96, 12'hb97, 12'hb98, 12'hb99, 12'hb9a, 12'hb9b, 12'hb9c, 12'hb9d, 12'hb9e, 12'hb9f, 12'h320, 12'h323, 12'h324, 12'h325, 12'h326, 12'h327, 12'h328, 12'h329, 12'h32a, 12'h32b, 12'h32c, 12'h32d, 12'h32e, 12'h32f, 12'h330, 12'h331, 12'h332, 12'h333, 12'h334, 12'h335, 12'h336, 12'h337, 12'h338, 12'h339, 12'h33a, 12'h33b, 12'h33c, 12'h33d, 12'h33e, 12'h33f: csr_status_o = 1'b1;
 						12'hc00, 12'hc02, 12'hc03, 12'hc04, 12'hc05, 12'hc06, 12'hc07, 12'hc08, 12'hc09, 12'hc0a, 12'hc0b, 12'hc0c, 12'hc0d, 12'hc0e, 12'hc0f, 12'hc10, 12'hc11, 12'hc12, 12'hc13, 12'hc14, 12'hc15, 12'hc16, 12'hc17, 12'hc18, 12'hc19, 12'hc1a, 12'hc1b, 12'hc1c, 12'hc1d, 12'hc1e, 12'hc1f, 12'hc80, 12'hc82, 12'hc83, 12'hc84, 12'hc85, 12'hc86, 12'hc87, 12'hc88, 12'hc89, 12'hc8a, 12'hc8b, 12'hc8c, 12'hc8d, 12'hc8e, 12'hc8f, 12'hc90, 12'hc91, 12'hc92, 12'hc93, 12'hc94, 12'hc95, 12'hc96, 12'hc97, 12'hc98, 12'hc99, 12'hc9a, 12'hc9b, 12'hc9c, 12'hc9d, 12'hc9e, 12'hc9f:
-							if ((csr_op != sv2v_cast_315CD(2'b00)) || ((PULP_SECURE && (current_priv_lvl_i != 2'b11)) && !mcounteren_i[instr_rdata_i[24:20]]))
+							if ((csr_op != sv2v_cast_8FA4C(2'b00)) || ((PULP_SECURE && (current_priv_lvl_i != 2'b11)) && !mcounteren_i[instr_rdata_i[24:20]]))
 								csr_illegal = 1'b1;
 							else
 								csr_status_o = 1'b1;
@@ -5621,18 +5692,18 @@ module cv32e40p_decoder (
 							if (DEBUG_TRIGGER_EN != 1)
 								csr_illegal = 1'b1;
 						12'hcc0, 12'hcc1, 12'hcc2, 12'hcc4, 12'hcc5, 12'hcc6:
-							if (!COREV_PULP || (csr_op != sv2v_cast_315CD(2'b00)))
+							if (!COREV_PULP || (csr_op != sv2v_cast_8FA4C(2'b00)))
 								csr_illegal = 1'b1;
 						12'hcd0:
-							if (!COREV_PULP || (csr_op != sv2v_cast_315CD(2'b00)))
+							if (!COREV_PULP || (csr_op != sv2v_cast_8FA4C(2'b00)))
 								csr_illegal = 1'b1;
 						12'hcd1:
-							if (!COREV_PULP || (csr_op != sv2v_cast_315CD(2'b00)))
+							if (!COREV_PULP || (csr_op != sv2v_cast_8FA4C(2'b00)))
 								csr_illegal = 1'b1;
 							else
 								csr_status_o = 1'b1;
 						12'hcd2:
-							if ((!COREV_PULP || (FPU && !ZFINX)) || (csr_op != sv2v_cast_315CD(2'b00)))
+							if ((!COREV_PULP || (FPU && !ZFINX)) || (csr_op != sv2v_cast_8FA4C(2'b00)))
 								csr_illegal = 1'b1;
 						12'h3a0, 12'h3a1, 12'h3a2, 12'h3a3, 12'h3b0, 12'h3b1, 12'h3b2, 12'h3b3, 12'h3b4, 12'h3b5, 12'h3b6, 12'h3b7, 12'h3b8, 12'h3b9, 12'h3ba, 12'h3bb, 12'h3bc, 12'h3bd, 12'h3be, 12'h3bf:
 							if (!USE_PMP)
@@ -5659,7 +5730,7 @@ module cv32e40p_decoder (
 	assign regfile_alu_we_o = (deassert_we_i ? 1'b0 : regfile_alu_we);
 	assign data_req_o = (deassert_we_i ? 1'b0 : data_req);
 	assign hwlp_we_o = (deassert_we_i ? 3'b000 : hwlp_we);
-	assign csr_op_o = (deassert_we_i ? sv2v_cast_315CD(2'b00) : csr_op);
+	assign csr_op_o = (deassert_we_i ? sv2v_cast_8FA4C(2'b00) : csr_op);
 	assign ctrl_transfer_insn_in_id_o = (deassert_we_i ? cv32e40p_pkg_BRANCH_NONE : ctrl_transfer_insn);
 	assign ctrl_transfer_insn_in_dec_o = ctrl_transfer_insn;
 	assign regfile_alu_we_dec_o = regfile_alu_we;
@@ -5693,8 +5764,10 @@ module cv32e40p_compressed_decoder (
 			;
 		illegal_instr_o = 1'b0;
 		instr_o = 1'sb0;
+		(* full_case, parallel_case *)
 		case (instr_i[1:0])
 			2'b00:
+				(* full_case, parallel_case *)
 				case (instr_i[15:13])
 					3'b000: begin
 						instr_o = {2'b00, instr_i[10:7], instr_i[12:11], instr_i[5], instr_i[6], 12'h041, instr_i[4:2], cv32e40p_pkg_OPCODE_OPIMM};
@@ -5726,6 +5799,7 @@ module cv32e40p_compressed_decoder (
 					default: illegal_instr_o = 1'b1;
 				endcase
 			2'b01:
+				(* full_case, parallel_case *)
 				case (instr_i[15:13])
 					3'b000: instr_o = {{6 {instr_i[12]}}, instr_i[12], instr_i[6:2], instr_i[11:7], 3'b000, instr_i[11:7], cv32e40p_pkg_OPCODE_OPIMM};
 					3'b001, 3'b101: instr_o = {instr_i[12], instr_i[8], instr_i[10:9], instr_i[6], instr_i[7], instr_i[2], instr_i[11], instr_i[5:3], {9 {instr_i[12]}}, 4'b0000, ~instr_i[15], cv32e40p_pkg_OPCODE_JAL};
@@ -5744,6 +5818,7 @@ module cv32e40p_compressed_decoder (
 						else
 							instr_o = {{15 {instr_i[12]}}, instr_i[6:2], instr_i[11:7], cv32e40p_pkg_OPCODE_LUI};
 					3'b100:
+						(* full_case, parallel_case *)
 						case (instr_i[11:10])
 							2'b00, 2'b01:
 								if (instr_i[12] == 1'b1) begin
@@ -5756,6 +5831,7 @@ module cv32e40p_compressed_decoder (
 									instr_o = {1'b0, instr_i[10], 5'b00000, instr_i[6:2], 2'b01, instr_i[9:7], 5'b10101, instr_i[9:7], cv32e40p_pkg_OPCODE_OPIMM};
 							2'b10: instr_o = {{6 {instr_i[12]}}, instr_i[12], instr_i[6:2], 2'b01, instr_i[9:7], 5'b11101, instr_i[9:7], cv32e40p_pkg_OPCODE_OPIMM};
 							2'b11:
+								(* full_case, parallel_case *)
 								case ({instr_i[12], instr_i[6:5]})
 									3'b000: instr_o = {9'b010000001, instr_i[4:2], 2'b01, instr_i[9:7], 5'b00001, instr_i[9:7], cv32e40p_pkg_OPCODE_OP};
 									3'b001: instr_o = {9'b000000001, instr_i[4:2], 2'b01, instr_i[9:7], 5'b10001, instr_i[9:7], cv32e40p_pkg_OPCODE_OP};
@@ -5767,6 +5843,7 @@ module cv32e40p_compressed_decoder (
 					3'b110, 3'b111: instr_o = {{4 {instr_i[12]}}, instr_i[6:5], instr_i[2], 7'b0000001, instr_i[9:7], 2'b00, instr_i[13], instr_i[11:10], instr_i[4:3], instr_i[12], cv32e40p_pkg_OPCODE_BRANCH};
 				endcase
 			2'b10:
+				(* full_case, parallel_case *)
 				case (instr_i[15:13])
 					3'b000:
 						if (instr_i[12] == 1'b1) begin
@@ -5927,6 +6004,7 @@ module cv32e40p_fifo (
 			status_cnt_q <= 1'sb0;
 		end
 		else
+			(* full_case, parallel_case *)
 			case (1'b1)
 				flush_i: begin
 					read_pointer_q <= 1'sb0;
@@ -6215,11 +6293,11 @@ module cv32e40p_mult (
 	reg [2:0] mulh_CS;
 	reg [2:0] mulh_NS;
 	assign short_round_tmp = 32'h00000001 << imm_i;
-	function automatic [2:0] sv2v_cast_9D1C7;
+	function automatic [2:0] sv2v_cast_F9F94;
 		input reg [2:0] inp;
-		sv2v_cast_9D1C7 = inp;
+		sv2v_cast_F9F94 = inp;
 	endfunction
-	assign short_round = (operator_i == sv2v_cast_9D1C7(3'b011) ? {1'b0, short_round_tmp[31:1]} : {32 {1'sb0}});
+	assign short_round = (operator_i == sv2v_cast_F9F94(3'b011) ? {1'b0, short_round_tmp[31:1]} : {32 {1'sb0}});
 	assign short_op_a[15:0] = (short_subword[0] ? op_a_i[31:16] : op_a_i[15:0]);
 	assign short_op_b[15:0] = (short_subword[1] ? op_b_i[31:16] : op_b_i[15:0]);
 	assign short_op_a[16] = short_signed[0] & short_op_a[15];
@@ -6252,7 +6330,7 @@ module cv32e40p_mult (
 				mulh_active_o = 1'b0;
 				mulh_ready = 1'b1;
 				mulh_save = 1'b0;
-				if ((operator_i == sv2v_cast_9D1C7(3'b110)) && enable_i) begin
+				if ((operator_i == sv2v_cast_F9F94(3'b110)) && enable_i) begin
 					mulh_ready = 1'b0;
 					mulh_NS = 3'd1;
 				end
@@ -6307,7 +6385,7 @@ module cv32e40p_mult (
 	wire [31:0] int_op_b_msu;
 	wire [31:0] int_result;
 	wire int_is_msu;
-	assign int_is_msu = operator_i == sv2v_cast_9D1C7(3'b001);
+	assign int_is_msu = operator_i == sv2v_cast_F9F94(3'b001);
 	assign int_op_a_msu = op_a_i ^ {32 {int_is_msu}};
 	assign int_op_b_msu = op_b_i & {32 {int_is_msu}};
 	assign int_result = ($signed(op_c_i) + $signed(int_op_b_msu)) + ($signed(int_op_a_msu) * $signed(op_b_i));
@@ -6351,11 +6429,12 @@ module cv32e40p_mult (
 		if (_sv2v_0)
 			;
 		result_o = 1'sb0;
+		(* full_case, parallel_case *)
 		case (operator_i)
-			sv2v_cast_9D1C7(3'b000), sv2v_cast_9D1C7(3'b001): result_o = int_result[31:0];
-			sv2v_cast_9D1C7(3'b010), sv2v_cast_9D1C7(3'b011), sv2v_cast_9D1C7(3'b110): result_o = short_result[31:0];
-			sv2v_cast_9D1C7(3'b100): result_o = dot_char_result[31:0];
-			sv2v_cast_9D1C7(3'b101):
+			sv2v_cast_F9F94(3'b000), sv2v_cast_F9F94(3'b001): result_o = int_result[31:0];
+			sv2v_cast_F9F94(3'b010), sv2v_cast_F9F94(3'b011), sv2v_cast_F9F94(3'b110): result_o = short_result[31:0];
+			sv2v_cast_F9F94(3'b100): result_o = dot_char_result[31:0];
+			sv2v_cast_F9F94(3'b101):
 				if (is_clpx_i) begin
 					if (clpx_img_i) begin
 						result_o[31:16] = clpx_shift_result;
@@ -6730,7 +6809,7 @@ module cv32e40p_ex_stage (
 		end
 		else begin
 			regfile_alu_we_fw_o = regfile_alu_we_i & ~apu_en_i;
-			regfile_alu_we_fw_power_o = (!COREV_PULP ? regfile_alu_we_i & ~apu_en_i : (((regfile_alu_we_i & ~apu_en_i) & mult_ready) & alu_ready) & lsu_ready_ex_i);
+			regfile_alu_we_fw_power_o = (COREV_PULP == 0 ? regfile_alu_we_i & ~apu_en_i : (((regfile_alu_we_i & ~apu_en_i) & mult_ready) & alu_ready) & lsu_ready_ex_i);
 			regfile_alu_waddr_fw_o = regfile_alu_waddr_i;
 			if (alu_en_i)
 				regfile_alu_wdata_fw_o = alu_result;
@@ -6750,7 +6829,7 @@ module cv32e40p_ex_stage (
 		wb_contention_lsu = 1'b0;
 		if (regfile_we_lsu) begin
 			regfile_we_wb_o = 1'b1;
-			regfile_we_wb_power_o = (!COREV_PULP ? 1'b1 : ~data_misaligned_ex_i & wb_ready_i);
+			regfile_we_wb_power_o = (COREV_PULP == 0 ? 1'b1 : ~data_misaligned_ex_i & wb_ready_i);
 			if (apu_valid & (!apu_singlecycle & !apu_multicycle))
 				wb_contention_lsu = 1'b1;
 		end
@@ -6808,9 +6887,9 @@ module cv32e40p_ex_stage (
 		.ex_ready_i(ex_ready_o)
 	);
 	localparam cv32e40p_pkg_BRANCH_JALR = 2'b10;
-	function automatic [2:0] sv2v_cast_9D1C7;
+	function automatic [2:0] sv2v_cast_F9F94;
 		input reg [2:0] inp;
-		sv2v_cast_9D1C7 = inp;
+		sv2v_cast_F9F94 = inp;
 	endfunction
 	generate
 		if (FPU == 1) begin : gen_apu
@@ -6847,17 +6926,17 @@ module cv32e40p_ex_stage (
 					apu_result_q <= 'b0;
 					apu_flags_q <= 'b0;
 				end
-				else if ((apu_rvalid_i && apu_multicycle) && ((((data_misaligned_i || data_misaligned_ex_i) || ((data_req_i || data_rvalid_i) && regfile_alu_we_i)) || (mulh_active && (mult_operator_i == sv2v_cast_9D1C7(3'b110)))) || (((ctrl_transfer_insn_in_dec_i == cv32e40p_pkg_BRANCH_JALR) && regfile_alu_we_i) && ~apu_read_dep_for_jalr_o))) begin
+				else if ((apu_rvalid_i && apu_multicycle) && ((((data_misaligned_i || data_misaligned_ex_i) || ((data_req_i || data_rvalid_i) && regfile_alu_we_i)) || (mulh_active && (mult_operator_i == sv2v_cast_F9F94(3'b110)))) || (((ctrl_transfer_insn_in_dec_i == cv32e40p_pkg_BRANCH_JALR) && regfile_alu_we_i) && ~apu_read_dep_for_jalr_o))) begin
 					apu_rvalid_q <= 1'b1;
 					apu_result_q <= apu_result_i;
 					apu_flags_q <= apu_flags_i;
 				end
-				else if (apu_rvalid_q && !((((data_misaligned_i || data_misaligned_ex_i) || ((data_req_i || data_rvalid_i) && regfile_alu_we_i)) || (mulh_active && (mult_operator_i == sv2v_cast_9D1C7(3'b110)))) || (((ctrl_transfer_insn_in_dec_i == cv32e40p_pkg_BRANCH_JALR) && regfile_alu_we_i) && ~apu_read_dep_for_jalr_o)))
+				else if (apu_rvalid_q && !((((data_misaligned_i || data_misaligned_ex_i) || ((data_req_i || data_rvalid_i) && regfile_alu_we_i)) || (mulh_active && (mult_operator_i == sv2v_cast_F9F94(3'b110)))) || (((ctrl_transfer_insn_in_dec_i == cv32e40p_pkg_BRANCH_JALR) && regfile_alu_we_i) && ~apu_read_dep_for_jalr_o)))
 					apu_rvalid_q <= 1'b0;
 			end
 			assign apu_req_o = apu_req;
 			assign apu_gnt = apu_gnt_i;
-			assign apu_valid = (apu_multicycle && ((((data_misaligned_i || data_misaligned_ex_i) || ((data_req_i || data_rvalid_i) && regfile_alu_we_i)) || (mulh_active && (mult_operator_i == sv2v_cast_9D1C7(3'b110)))) || (((ctrl_transfer_insn_in_dec_i == cv32e40p_pkg_BRANCH_JALR) && regfile_alu_we_i) && ~apu_read_dep_for_jalr_o)) ? 1'b0 : apu_rvalid_i || apu_rvalid_q);
+			assign apu_valid = (apu_multicycle && ((((data_misaligned_i || data_misaligned_ex_i) || ((data_req_i || data_rvalid_i) && regfile_alu_we_i)) || (mulh_active && (mult_operator_i == sv2v_cast_F9F94(3'b110)))) || (((ctrl_transfer_insn_in_dec_i == cv32e40p_pkg_BRANCH_JALR) && regfile_alu_we_i) && ~apu_read_dep_for_jalr_o)) ? 1'b0 : apu_rvalid_i || apu_rvalid_q);
 			assign apu_operands_o = apu_operands_i;
 			assign apu_op_o = apu_op_i;
 			assign apu_result = (apu_rvalid_q ? apu_result_q : apu_result_i);
@@ -7119,12 +7198,12 @@ module cv32e40p_alu (
 	reg [35:0] adder_in_b;
 	wire [31:0] adder_result;
 	wire [36:0] adder_result_expanded;
-	function automatic [6:0] sv2v_cast_576C1;
+	function automatic [6:0] sv2v_cast_81146;
 		input reg [6:0] inp;
-		sv2v_cast_576C1 = inp;
+		sv2v_cast_81146 = inp;
 	endfunction
-	assign adder_op_b_negate = ((((operator_i == sv2v_cast_576C1(7'b0011001)) || (operator_i == sv2v_cast_576C1(7'b0011101))) || (operator_i == sv2v_cast_576C1(7'b0011011))) || (operator_i == sv2v_cast_576C1(7'b0011111))) || is_subrot_i;
-	assign adder_op_a = (operator_i == sv2v_cast_576C1(7'b0010100) ? operand_a_neg : (is_subrot_i ? {operand_b_i[15:0], operand_a_i[31:16]} : operand_a_i));
+	assign adder_op_b_negate = ((((operator_i == sv2v_cast_81146(7'b0011001)) || (operator_i == sv2v_cast_81146(7'b0011101))) || (operator_i == sv2v_cast_81146(7'b0011011))) || (operator_i == sv2v_cast_81146(7'b0011111))) || is_subrot_i;
+	assign adder_op_a = (operator_i == sv2v_cast_81146(7'b0010100) ? operand_a_neg : (is_subrot_i ? {operand_b_i[15:0], operand_a_i[31:16]} : operand_a_i));
 	assign adder_op_b = (adder_op_b_negate ? (is_subrot_i ? ~{operand_a_i[15:0], operand_b_i[31:16]} : operand_b_neg) : operand_b_i);
 	localparam cv32e40p_pkg_VEC_MODE16 = 2'b10;
 	localparam cv32e40p_pkg_VEC_MODE8 = 2'b11;
@@ -7147,7 +7226,7 @@ module cv32e40p_alu (
 		adder_in_b[26:19] = adder_op_b[23:16];
 		adder_in_b[27] = 1'b0;
 		adder_in_b[35:28] = adder_op_b[31:24];
-		if (adder_op_b_negate || ((operator_i == sv2v_cast_576C1(7'b0010100)) || (operator_i == sv2v_cast_576C1(7'b0010110)))) begin
+		if (adder_op_b_negate || ((operator_i == sv2v_cast_81146(7'b0010100)) || (operator_i == sv2v_cast_81146(7'b0010110)))) begin
 			adder_in_b[0] = 1'b1;
 			case (vector_mode_i)
 				cv32e40p_pkg_VEC_MODE16: adder_in_b[18] = 1'b1;
@@ -7172,7 +7251,7 @@ module cv32e40p_alu (
 	assign adder_result = {adder_result_expanded[35:28], adder_result_expanded[26:19], adder_result_expanded[17:10], adder_result_expanded[8:1]};
 	wire [31:0] adder_round_value;
 	wire [31:0] adder_round_result;
-	assign adder_round_value = ((((operator_i == sv2v_cast_576C1(7'b0011100)) || (operator_i == sv2v_cast_576C1(7'b0011101))) || (operator_i == sv2v_cast_576C1(7'b0011110))) || (operator_i == sv2v_cast_576C1(7'b0011111)) ? {1'b0, bmask[31:1]} : {32 {1'sb0}});
+	assign adder_round_value = ((((operator_i == sv2v_cast_81146(7'b0011100)) || (operator_i == sv2v_cast_81146(7'b0011101))) || (operator_i == sv2v_cast_81146(7'b0011110))) || (operator_i == sv2v_cast_81146(7'b0011111)) ? {1'b0, bmask[31:1]} : {32 {1'sb0}});
 	assign adder_round_result = adder_result + adder_round_value;
 	wire shift_left;
 	wire shift_use_round;
@@ -7204,15 +7283,15 @@ module cv32e40p_alu (
 			default: shift_amt_left[31:0] = shift_amt[31:0];
 		endcase
 	end
-	assign shift_left = ((((((((operator_i == sv2v_cast_576C1(7'b0100111)) || (operator_i == sv2v_cast_576C1(7'b0101010))) || (operator_i == sv2v_cast_576C1(7'b0110111))) || (operator_i == sv2v_cast_576C1(7'b0110101))) || (operator_i == sv2v_cast_576C1(7'b0110001))) || (operator_i == sv2v_cast_576C1(7'b0110000))) || (operator_i == sv2v_cast_576C1(7'b0110011))) || (operator_i == sv2v_cast_576C1(7'b0110010))) || (operator_i == sv2v_cast_576C1(7'b1001001));
-	assign shift_use_round = (((((((operator_i == sv2v_cast_576C1(7'b0011000)) || (operator_i == sv2v_cast_576C1(7'b0011001))) || (operator_i == sv2v_cast_576C1(7'b0011100))) || (operator_i == sv2v_cast_576C1(7'b0011101))) || (operator_i == sv2v_cast_576C1(7'b0011010))) || (operator_i == sv2v_cast_576C1(7'b0011011))) || (operator_i == sv2v_cast_576C1(7'b0011110))) || (operator_i == sv2v_cast_576C1(7'b0011111));
-	assign shift_arithmetic = (((((operator_i == sv2v_cast_576C1(7'b0100100)) || (operator_i == sv2v_cast_576C1(7'b0101000))) || (operator_i == sv2v_cast_576C1(7'b0011000))) || (operator_i == sv2v_cast_576C1(7'b0011001))) || (operator_i == sv2v_cast_576C1(7'b0011100))) || (operator_i == sv2v_cast_576C1(7'b0011101));
+	assign shift_left = ((((((((operator_i == sv2v_cast_81146(7'b0100111)) || (operator_i == sv2v_cast_81146(7'b0101010))) || (operator_i == sv2v_cast_81146(7'b0110111))) || (operator_i == sv2v_cast_81146(7'b0110101))) || (operator_i == sv2v_cast_81146(7'b0110001))) || (operator_i == sv2v_cast_81146(7'b0110000))) || (operator_i == sv2v_cast_81146(7'b0110011))) || (operator_i == sv2v_cast_81146(7'b0110010))) || (operator_i == sv2v_cast_81146(7'b1001001));
+	assign shift_use_round = (((((((operator_i == sv2v_cast_81146(7'b0011000)) || (operator_i == sv2v_cast_81146(7'b0011001))) || (operator_i == sv2v_cast_81146(7'b0011100))) || (operator_i == sv2v_cast_81146(7'b0011101))) || (operator_i == sv2v_cast_81146(7'b0011010))) || (operator_i == sv2v_cast_81146(7'b0011011))) || (operator_i == sv2v_cast_81146(7'b0011110))) || (operator_i == sv2v_cast_81146(7'b0011111));
+	assign shift_arithmetic = (((((operator_i == sv2v_cast_81146(7'b0100100)) || (operator_i == sv2v_cast_81146(7'b0101000))) || (operator_i == sv2v_cast_81146(7'b0011000))) || (operator_i == sv2v_cast_81146(7'b0011001))) || (operator_i == sv2v_cast_81146(7'b0011100))) || (operator_i == sv2v_cast_81146(7'b0011101));
 	assign shift_op_a = (shift_left ? operand_a_rev : (shift_use_round ? adder_round_result : operand_a_i));
 	assign shift_amt_int = (shift_use_round ? shift_amt_norm : (shift_left ? shift_amt_left : shift_amt));
 	assign shift_amt_norm = (is_clpx_i ? {clpx_shift_ex, clpx_shift_ex} : {4 {3'b000, bmask_b_i}});
 	assign clpx_shift_ex = $unsigned(clpx_shift_i);
 	wire [63:0] shift_op_a_32;
-	assign shift_op_a_32 = (operator_i == sv2v_cast_576C1(7'b0100110) ? {shift_op_a, shift_op_a} : $signed({{32 {shift_arithmetic & shift_op_a[31]}}, shift_op_a}));
+	assign shift_op_a_32 = (operator_i == sv2v_cast_81146(7'b0100110) ? {shift_op_a, shift_op_a} : $signed({{32 {shift_arithmetic & shift_op_a[31]}}, shift_op_a}));
 	always @(*) begin
 		if (_sv2v_0)
 			;
@@ -7249,7 +7328,7 @@ module cv32e40p_alu (
 		if (_sv2v_0)
 			;
 		operand_b_eq = operand_b_neg;
-		if (operator_i == sv2v_cast_576C1(7'b0010111))
+		if (operator_i == sv2v_cast_81146(7'b0010111))
 			operand_b_eq = 1'sb0;
 		else
 			operand_b_eq = operand_b_neg;
@@ -7259,8 +7338,9 @@ module cv32e40p_alu (
 		if (_sv2v_0)
 			;
 		cmp_signed = 4'b0000;
+		(* full_case, parallel_case *)
 		case (operator_i)
-			sv2v_cast_576C1(7'b0001000), sv2v_cast_576C1(7'b0001010), sv2v_cast_576C1(7'b0000000), sv2v_cast_576C1(7'b0000100), sv2v_cast_576C1(7'b0000010), sv2v_cast_576C1(7'b0000110), sv2v_cast_576C1(7'b0010000), sv2v_cast_576C1(7'b0010010), sv2v_cast_576C1(7'b0010100), sv2v_cast_576C1(7'b0010110), sv2v_cast_576C1(7'b0010111):
+			sv2v_cast_81146(7'b0001000), sv2v_cast_81146(7'b0001010), sv2v_cast_81146(7'b0000000), sv2v_cast_81146(7'b0000100), sv2v_cast_81146(7'b0000010), sv2v_cast_81146(7'b0000110), sv2v_cast_81146(7'b0010000), sv2v_cast_81146(7'b0010010), sv2v_cast_81146(7'b0010100), sv2v_cast_81146(7'b0010110), sv2v_cast_81146(7'b0010111):
 				case (vector_mode_i)
 					cv32e40p_pkg_VEC_MODE8: cmp_signed[3:0] = 4'b1111;
 					cv32e40p_pkg_VEC_MODE16: cmp_signed[3:0] = 4'b1010;
@@ -7303,13 +7383,14 @@ module cv32e40p_alu (
 		if (_sv2v_0)
 			;
 		cmp_result = is_equal;
+		(* full_case, parallel_case *)
 		case (operator_i)
-			sv2v_cast_576C1(7'b0001100): cmp_result = is_equal;
-			sv2v_cast_576C1(7'b0001101): cmp_result = ~is_equal;
-			sv2v_cast_576C1(7'b0001000), sv2v_cast_576C1(7'b0001001): cmp_result = is_greater;
-			sv2v_cast_576C1(7'b0001010), sv2v_cast_576C1(7'b0001011): cmp_result = is_greater | is_equal;
-			sv2v_cast_576C1(7'b0000000), sv2v_cast_576C1(7'b0000010), sv2v_cast_576C1(7'b0000001), sv2v_cast_576C1(7'b0000011): cmp_result = ~(is_greater | is_equal);
-			sv2v_cast_576C1(7'b0000110), sv2v_cast_576C1(7'b0000111), sv2v_cast_576C1(7'b0000100), sv2v_cast_576C1(7'b0000101): cmp_result = ~is_greater;
+			sv2v_cast_81146(7'b0001100): cmp_result = is_equal;
+			sv2v_cast_81146(7'b0001101): cmp_result = ~is_equal;
+			sv2v_cast_81146(7'b0001000), sv2v_cast_81146(7'b0001001): cmp_result = is_greater;
+			sv2v_cast_81146(7'b0001010), sv2v_cast_81146(7'b0001011): cmp_result = is_greater | is_equal;
+			sv2v_cast_81146(7'b0000000), sv2v_cast_81146(7'b0000010), sv2v_cast_81146(7'b0000001), sv2v_cast_81146(7'b0000011): cmp_result = ~(is_greater | is_equal);
+			sv2v_cast_81146(7'b0000110), sv2v_cast_81146(7'b0000111), sv2v_cast_81146(7'b0000100), sv2v_cast_81146(7'b0000101): cmp_result = ~is_greater;
 			default:
 				;
 		endcase
@@ -7319,8 +7400,8 @@ module cv32e40p_alu (
 	wire [3:0] sel_minmax;
 	wire do_min;
 	wire [31:0] minmax_b;
-	assign minmax_b = (operator_i == sv2v_cast_576C1(7'b0010100) ? adder_result : operand_b_i);
-	assign do_min = (((operator_i == sv2v_cast_576C1(7'b0010000)) || (operator_i == sv2v_cast_576C1(7'b0010001))) || (operator_i == sv2v_cast_576C1(7'b0010110))) || (operator_i == sv2v_cast_576C1(7'b0010111));
+	assign minmax_b = (operator_i == sv2v_cast_81146(7'b0010100) ? adder_result : operand_b_i);
+	assign do_min = (((operator_i == sv2v_cast_81146(7'b0010000)) || (operator_i == sv2v_cast_81146(7'b0010001))) || (operator_i == sv2v_cast_81146(7'b0010110))) || (operator_i == sv2v_cast_81146(7'b0010111));
 	assign sel_minmax[3:0] = is_greater ^ {4 {do_min}};
 	assign result_minmax[31:24] = (sel_minmax[3] == 1'b1 ? operand_a_i[31:24] : minmax_b[31:24]);
 	assign result_minmax[23:16] = (sel_minmax[2] == 1'b1 ? operand_a_i[23:16] : minmax_b[23:16]);
@@ -7331,7 +7412,7 @@ module cv32e40p_alu (
 		if (_sv2v_0)
 			;
 		clip_result = result_minmax;
-		if (operator_i == sv2v_cast_576C1(7'b0010111)) begin
+		if (operator_i == sv2v_cast_81146(7'b0010111)) begin
 			if (operand_a_i[31] || is_equal_clip)
 				clip_result = 1'sb0;
 			else
@@ -7360,9 +7441,10 @@ module cv32e40p_alu (
 		shuffle_reg1_sel = 2'b01;
 		shuffle_reg0_sel = 2'b10;
 		shuffle_through = 1'sb1;
+		(* full_case, parallel_case *)
 		case (operator_i)
-			sv2v_cast_576C1(7'b0111111), sv2v_cast_576C1(7'b0111110): begin
-				if (operator_i == sv2v_cast_576C1(7'b0111110))
+			sv2v_cast_81146(7'b0111111), sv2v_cast_81146(7'b0111110): begin
+				if (operator_i == sv2v_cast_81146(7'b0111110))
 					shuffle_reg1_sel = 2'b11;
 				if (vector_mode_i == cv32e40p_pkg_VEC_MODE8) begin
 					shuffle_reg_sel[3:1] = 3'b111;
@@ -7373,7 +7455,7 @@ module cv32e40p_alu (
 					shuffle_reg_sel[1:0] = 2'b00;
 				end
 			end
-			sv2v_cast_576C1(7'b0111000): begin
+			sv2v_cast_81146(7'b0111000): begin
 				shuffle_reg1_sel = 2'b00;
 				if (vector_mode_i == cv32e40p_pkg_VEC_MODE8) begin
 					shuffle_through = 4'b0011;
@@ -7382,7 +7464,7 @@ module cv32e40p_alu (
 				else
 					shuffle_reg_sel = 4'b0011;
 			end
-			sv2v_cast_576C1(7'b0111001): begin
+			sv2v_cast_81146(7'b0111001): begin
 				shuffle_reg1_sel = 2'b00;
 				if (vector_mode_i == cv32e40p_pkg_VEC_MODE8) begin
 					shuffle_through = 4'b1100;
@@ -7391,7 +7473,8 @@ module cv32e40p_alu (
 				else
 					shuffle_reg_sel = 4'b0011;
 			end
-			sv2v_cast_576C1(7'b0111011):
+			sv2v_cast_81146(7'b0111011):
+				(* full_case, parallel_case *)
 				case (vector_mode_i)
 					cv32e40p_pkg_VEC_MODE8: begin
 						shuffle_reg_sel[3] = ~operand_b_i[26];
@@ -7408,10 +7491,12 @@ module cv32e40p_alu (
 					default:
 						;
 				endcase
-			sv2v_cast_576C1(7'b0101101):
+			sv2v_cast_81146(7'b0101101):
+				(* full_case, parallel_case *)
 				case (vector_mode_i)
 					cv32e40p_pkg_VEC_MODE8: begin
 						shuffle_reg0_sel = 2'b00;
+						(* full_case, parallel_case *)
 						case (imm_vec_ext_i)
 							2'b00: shuffle_reg_sel[3:0] = 4'b1110;
 							2'b01: shuffle_reg_sel[3:0] = 4'b1101;
@@ -7437,8 +7522,10 @@ module cv32e40p_alu (
 		if (_sv2v_0)
 			;
 		shuffle_byte_sel = 1'sb0;
+		(* full_case, parallel_case *)
 		case (operator_i)
-			sv2v_cast_576C1(7'b0111110), sv2v_cast_576C1(7'b0111111):
+			sv2v_cast_81146(7'b0111110), sv2v_cast_81146(7'b0111111):
+				(* full_case, parallel_case *)
 				case (vector_mode_i)
 					cv32e40p_pkg_VEC_MODE8: begin
 						shuffle_byte_sel[6+:2] = imm_vec_ext_i[1:0];
@@ -7455,7 +7542,8 @@ module cv32e40p_alu (
 					default:
 						;
 				endcase
-			sv2v_cast_576C1(7'b0111000):
+			sv2v_cast_81146(7'b0111000):
+				(* full_case, parallel_case *)
 				case (vector_mode_i)
 					cv32e40p_pkg_VEC_MODE8: begin
 						shuffle_byte_sel[6+:2] = 2'b00;
@@ -7472,7 +7560,8 @@ module cv32e40p_alu (
 					default:
 						;
 				endcase
-			sv2v_cast_576C1(7'b0111001):
+			sv2v_cast_81146(7'b0111001):
+				(* full_case, parallel_case *)
 				case (vector_mode_i)
 					cv32e40p_pkg_VEC_MODE8: begin
 						shuffle_byte_sel[6+:2] = 2'b00;
@@ -7489,7 +7578,8 @@ module cv32e40p_alu (
 					default:
 						;
 				endcase
-			sv2v_cast_576C1(7'b0111011), sv2v_cast_576C1(7'b0111010):
+			sv2v_cast_81146(7'b0111011), sv2v_cast_81146(7'b0111010):
+				(* full_case, parallel_case *)
 				case (vector_mode_i)
 					cv32e40p_pkg_VEC_MODE8: begin
 						shuffle_byte_sel[6+:2] = operand_b_i[25:24];
@@ -7506,7 +7596,7 @@ module cv32e40p_alu (
 					default:
 						;
 				endcase
-			sv2v_cast_576C1(7'b0101101): begin
+			sv2v_cast_81146(7'b0101101): begin
 				shuffle_byte_sel[6+:2] = 2'b11;
 				shuffle_byte_sel[4+:2] = 2'b10;
 				shuffle_byte_sel[2+:2] = 2'b01;
@@ -7550,9 +7640,9 @@ module cv32e40p_alu (
 			;
 		ff_input = 1'sb0;
 		case (operator_i)
-			sv2v_cast_576C1(7'b0110110): ff_input = operand_a_i;
-			sv2v_cast_576C1(7'b0110000), sv2v_cast_576C1(7'b0110010), sv2v_cast_576C1(7'b0110111): ff_input = operand_a_rev;
-			sv2v_cast_576C1(7'b0110001), sv2v_cast_576C1(7'b0110011), sv2v_cast_576C1(7'b0110101):
+			sv2v_cast_81146(7'b0110110): ff_input = operand_a_i;
+			sv2v_cast_81146(7'b0110000), sv2v_cast_81146(7'b0110010), sv2v_cast_81146(7'b0110111): ff_input = operand_a_rev;
+			sv2v_cast_81146(7'b0110001), sv2v_cast_81146(7'b0110011), sv2v_cast_81146(7'b0110101):
 				if (operand_a_i[31])
 					ff_input = operand_a_neg_rev;
 				else
@@ -7571,10 +7661,10 @@ module cv32e40p_alu (
 			;
 		bitop_result = 1'sb0;
 		case (operator_i)
-			sv2v_cast_576C1(7'b0110110): bitop_result = (ff_no_one ? 6'd32 : {1'b0, ff1_result});
-			sv2v_cast_576C1(7'b0110111): bitop_result = (ff_no_one ? 6'd32 : {1'b0, fl1_result});
-			sv2v_cast_576C1(7'b0110100): bitop_result = cnt_result;
-			sv2v_cast_576C1(7'b0110101):
+			sv2v_cast_81146(7'b0110110): bitop_result = (ff_no_one ? 6'd32 : {1'b0, ff1_result});
+			sv2v_cast_81146(7'b0110111): bitop_result = (ff_no_one ? 6'd32 : {1'b0, fl1_result});
+			sv2v_cast_81146(7'b0110100): bitop_result = cnt_result;
+			sv2v_cast_81146(7'b0110101):
 				if (ff_no_one) begin
 					if (operand_a_i[31])
 						bitop_result = 6'd31;
@@ -7598,8 +7688,8 @@ module cv32e40p_alu (
 	assign bmask_first = 32'hfffffffe << bmask_a_i;
 	assign bmask = ~bmask_first << bmask_b_i;
 	assign bmask_inv = ~bmask;
-	assign bextins_and = (operator_i == sv2v_cast_576C1(7'b0101010) ? operand_c_i : {32 {extract_sign}});
-	assign extract_is_signed = operator_i == sv2v_cast_576C1(7'b0101000);
+	assign bextins_and = (operator_i == sv2v_cast_81146(7'b0101010) ? operand_c_i : {32 {extract_sign}});
+	assign extract_is_signed = operator_i == sv2v_cast_81146(7'b0101000);
 	assign extract_sign = extract_is_signed & shift_result[bmask_a_i];
 	assign bextins_result = (bmask & shift_result) | (bextins_and & bmask_inv);
 	assign bclr_result = operand_a_i & bmask_inv;
@@ -7629,6 +7719,7 @@ module cv32e40p_alu (
 		if (_sv2v_0)
 			;
 		reverse_result = 1'sb0;
+		(* full_case, parallel_case *)
 		case (radix_mux_sel)
 			2'b00: reverse_result = radix_2_rev;
 			2'b01: reverse_result = radix_4_rev;
@@ -7645,7 +7736,7 @@ module cv32e40p_alu (
 	assign div_op_a_signed = operand_a_i[31] & div_signed;
 	assign div_shift_int = (ff_no_one ? 6'd31 : clb_result);
 	assign div_shift = div_shift_int + (div_op_a_signed ? 6'd0 : 6'd1);
-	assign div_valid = enable_i & ((((operator_i == sv2v_cast_576C1(7'b0110001)) || (operator_i == sv2v_cast_576C1(7'b0110000))) || (operator_i == sv2v_cast_576C1(7'b0110011))) || (operator_i == sv2v_cast_576C1(7'b0110010)));
+	assign div_valid = enable_i & ((((operator_i == sv2v_cast_81146(7'b0110001)) || (operator_i == sv2v_cast_81146(7'b0110000))) || (operator_i == sv2v_cast_81146(7'b0110011))) || (operator_i == sv2v_cast_81146(7'b0110010)));
 	cv32e40p_alu_div alu_div_i(
 		.Clk_CI(clk),
 		.Rst_RBI(rst_n),
@@ -7664,28 +7755,29 @@ module cv32e40p_alu (
 		if (_sv2v_0)
 			;
 		result_o = 1'sb0;
+		(* full_case, parallel_case *)
 		case (operator_i)
-			sv2v_cast_576C1(7'b0010101): result_o = operand_a_i & operand_b_i;
-			sv2v_cast_576C1(7'b0101110): result_o = operand_a_i | operand_b_i;
-			sv2v_cast_576C1(7'b0101111): result_o = operand_a_i ^ operand_b_i;
-			sv2v_cast_576C1(7'b0011000), sv2v_cast_576C1(7'b0011100), sv2v_cast_576C1(7'b0011010), sv2v_cast_576C1(7'b0011110), sv2v_cast_576C1(7'b0011001), sv2v_cast_576C1(7'b0011101), sv2v_cast_576C1(7'b0011011), sv2v_cast_576C1(7'b0011111), sv2v_cast_576C1(7'b0100111), sv2v_cast_576C1(7'b0100101), sv2v_cast_576C1(7'b0100100), sv2v_cast_576C1(7'b0100110): result_o = shift_result;
-			sv2v_cast_576C1(7'b0101010), sv2v_cast_576C1(7'b0101000), sv2v_cast_576C1(7'b0101001): result_o = bextins_result;
-			sv2v_cast_576C1(7'b0101011): result_o = bclr_result;
-			sv2v_cast_576C1(7'b0101100): result_o = bset_result;
-			sv2v_cast_576C1(7'b1001001): result_o = reverse_result;
-			sv2v_cast_576C1(7'b0111010), sv2v_cast_576C1(7'b0111011), sv2v_cast_576C1(7'b0111000), sv2v_cast_576C1(7'b0111001), sv2v_cast_576C1(7'b0111111), sv2v_cast_576C1(7'b0111110), sv2v_cast_576C1(7'b0101101): result_o = pack_result;
-			sv2v_cast_576C1(7'b0010000), sv2v_cast_576C1(7'b0010001), sv2v_cast_576C1(7'b0010010), sv2v_cast_576C1(7'b0010011): result_o = result_minmax;
-			sv2v_cast_576C1(7'b0010100): result_o = (is_clpx_i ? {adder_result[31:16], operand_a_i[15:0]} : result_minmax);
-			sv2v_cast_576C1(7'b0010110), sv2v_cast_576C1(7'b0010111): result_o = clip_result;
-			sv2v_cast_576C1(7'b0001100), sv2v_cast_576C1(7'b0001101), sv2v_cast_576C1(7'b0001001), sv2v_cast_576C1(7'b0001011), sv2v_cast_576C1(7'b0000001), sv2v_cast_576C1(7'b0000101), sv2v_cast_576C1(7'b0001000), sv2v_cast_576C1(7'b0001010), sv2v_cast_576C1(7'b0000000), sv2v_cast_576C1(7'b0000100): begin
+			sv2v_cast_81146(7'b0010101): result_o = operand_a_i & operand_b_i;
+			sv2v_cast_81146(7'b0101110): result_o = operand_a_i | operand_b_i;
+			sv2v_cast_81146(7'b0101111): result_o = operand_a_i ^ operand_b_i;
+			sv2v_cast_81146(7'b0011000), sv2v_cast_81146(7'b0011100), sv2v_cast_81146(7'b0011010), sv2v_cast_81146(7'b0011110), sv2v_cast_81146(7'b0011001), sv2v_cast_81146(7'b0011101), sv2v_cast_81146(7'b0011011), sv2v_cast_81146(7'b0011111), sv2v_cast_81146(7'b0100111), sv2v_cast_81146(7'b0100101), sv2v_cast_81146(7'b0100100), sv2v_cast_81146(7'b0100110): result_o = shift_result;
+			sv2v_cast_81146(7'b0101010), sv2v_cast_81146(7'b0101000), sv2v_cast_81146(7'b0101001): result_o = bextins_result;
+			sv2v_cast_81146(7'b0101011): result_o = bclr_result;
+			sv2v_cast_81146(7'b0101100): result_o = bset_result;
+			sv2v_cast_81146(7'b1001001): result_o = reverse_result;
+			sv2v_cast_81146(7'b0111010), sv2v_cast_81146(7'b0111011), sv2v_cast_81146(7'b0111000), sv2v_cast_81146(7'b0111001), sv2v_cast_81146(7'b0111111), sv2v_cast_81146(7'b0111110), sv2v_cast_81146(7'b0101101): result_o = pack_result;
+			sv2v_cast_81146(7'b0010000), sv2v_cast_81146(7'b0010001), sv2v_cast_81146(7'b0010010), sv2v_cast_81146(7'b0010011): result_o = result_minmax;
+			sv2v_cast_81146(7'b0010100): result_o = (is_clpx_i ? {adder_result[31:16], operand_a_i[15:0]} : result_minmax);
+			sv2v_cast_81146(7'b0010110), sv2v_cast_81146(7'b0010111): result_o = clip_result;
+			sv2v_cast_81146(7'b0001100), sv2v_cast_81146(7'b0001101), sv2v_cast_81146(7'b0001001), sv2v_cast_81146(7'b0001011), sv2v_cast_81146(7'b0000001), sv2v_cast_81146(7'b0000101), sv2v_cast_81146(7'b0001000), sv2v_cast_81146(7'b0001010), sv2v_cast_81146(7'b0000000), sv2v_cast_81146(7'b0000100): begin
 				result_o[31:24] = {8 {cmp_result[3]}};
 				result_o[23:16] = {8 {cmp_result[2]}};
 				result_o[15:8] = {8 {cmp_result[1]}};
 				result_o[7:0] = {8 {cmp_result[0]}};
 			end
-			sv2v_cast_576C1(7'b0000010), sv2v_cast_576C1(7'b0000011), sv2v_cast_576C1(7'b0000110), sv2v_cast_576C1(7'b0000111): result_o = {31'b0000000000000000000000000000000, comparison_result_o};
-			sv2v_cast_576C1(7'b0110110), sv2v_cast_576C1(7'b0110111), sv2v_cast_576C1(7'b0110101), sv2v_cast_576C1(7'b0110100): result_o = {26'h0000000, bitop_result[5:0]};
-			sv2v_cast_576C1(7'b0110001), sv2v_cast_576C1(7'b0110000), sv2v_cast_576C1(7'b0110011), sv2v_cast_576C1(7'b0110010): result_o = result_div;
+			sv2v_cast_81146(7'b0000010), sv2v_cast_81146(7'b0000011), sv2v_cast_81146(7'b0000110), sv2v_cast_81146(7'b0000111): result_o = {31'b0000000000000000000000000000000, comparison_result_o};
+			sv2v_cast_81146(7'b0110110), sv2v_cast_81146(7'b0110111), sv2v_cast_81146(7'b0110101), sv2v_cast_81146(7'b0110100): result_o = {26'h0000000, bitop_result[5:0]};
+			sv2v_cast_81146(7'b0110001), sv2v_cast_81146(7'b0110000), sv2v_cast_81146(7'b0110011), sv2v_cast_81146(7'b0110010): result_o = result_div;
 			default:
 				;
 		endcase
@@ -8298,6 +8390,7 @@ module cv32e40p_controller (
 		hwlp_dec_cnt_o = 1'sb0;
 		hwlp_end_4_id_d = 1'b0;
 		hwlp_targ_addr_o = ((hwlp_start1_leq_pc && hwlp_end1_geq_pc) && !(hwlp_start0_leq_pc && hwlp_end0_geq_pc) ? hwlp_start_addr_i[32+:32] : hwlp_start_addr_i[0+:32]);
+		(* full_case, parallel_case *)
 		case (ctrl_fsm_cs)
 			5'd0: begin
 				is_decoding_o = 1'b0;
@@ -8426,6 +8519,7 @@ module cv32e40p_controller (
 							illegal_insn_n = 1'b1;
 						end
 						else
+							(* full_case, parallel_case *)
 							case (1'b1)
 								jump_in_dec: begin
 									pc_mux_o = cv32e40p_pkg_PC_JUMP;
@@ -8466,7 +8560,15 @@ module cv32e40p_controller (
 								end
 								csr_status_i: begin
 									halt_if_o = 1'b1;
-									ctrl_fsm_ns = (id_ready_i ? 5'd8 : 5'd5);
+									if (~id_ready_i)
+										ctrl_fsm_ns = 5'd5;
+									else begin
+										ctrl_fsm_ns = 5'd8;
+										if (hwlp_end0_eq_pc)
+											hwlp_dec_cnt_o[0] = 1'b1;
+										if (hwlp_end1_eq_pc)
+											hwlp_dec_cnt_o[1] = 1'b1;
+									end
 								end
 								data_load_event_i: begin
 									ctrl_fsm_ns = (id_ready_i ? 5'd7 : 5'd5);
@@ -8501,6 +8603,7 @@ module cv32e40p_controller (
 						if (debug_single_step_i & ~debug_mode_q) begin
 							halt_if_o = 1'b1;
 							if (id_ready_i)
+								(* full_case, parallel_case *)
 								case (1'b1)
 									illegal_insn_i | ecall_insn_i: ctrl_fsm_ns = 5'd8;
 									~ebrk_force_debug_mode & ebrk_insn_i: ctrl_fsm_ns = 5'd8;
@@ -8555,6 +8658,7 @@ module cv32e40p_controller (
 								illegal_insn_n = 1'b1;
 							end
 							else
+								(* full_case, parallel_case *)
 								case (1'b1)
 									ebrk_insn_i: begin
 										halt_if_o = 1'b1;
@@ -8573,7 +8677,15 @@ module cv32e40p_controller (
 									end
 									csr_status_i: begin
 										halt_if_o = 1'b1;
-										ctrl_fsm_ns = (id_ready_i ? 5'd8 : 5'd15);
+										if (~id_ready_i)
+											ctrl_fsm_ns = 5'd15;
+										else begin
+											ctrl_fsm_ns = 5'd8;
+											if (hwlp_end0_eq_pc)
+												hwlp_dec_cnt_o[0] = 1'b1;
+											if (hwlp_end1_eq_pc)
+												hwlp_dec_cnt_o[1] = 1'b1;
+										end
 									end
 									data_load_event_i: begin
 										ctrl_fsm_ns = (id_ready_i ? 5'd7 : 5'd15);
@@ -8605,6 +8717,7 @@ module cv32e40p_controller (
 							if (debug_single_step_i & ~debug_mode_q) begin
 								halt_if_o = 1'b1;
 								if (id_ready_i)
+									(* full_case, parallel_case *)
 									case (1'b1)
 										illegal_insn_i | ecall_insn_i: ctrl_fsm_ns = 5'd8;
 										~ebrk_force_debug_mode & ebrk_insn_i: ctrl_fsm_ns = 5'd8;
@@ -8640,6 +8753,7 @@ module cv32e40p_controller (
 						csr_cause_o = {1'b0, cv32e40p_pkg_EXC_CAUSE_ILLEGAL_INSN};
 					end
 					else
+						(* full_case, parallel_case *)
 						case (1'b1)
 							ebrk_insn_i: begin
 								csr_save_id_o = 1'b1;
@@ -8723,6 +8837,7 @@ module cv32e40p_controller (
 						ctrl_fsm_ns = 5'd12;
 				end
 				else
+					(* full_case, parallel_case *)
 					case (1'b1)
 						ebrk_insn_i: begin
 							pc_mux_o = cv32e40p_pkg_PC_EXCEPTION;
@@ -8752,18 +8867,11 @@ module cv32e40p_controller (
 							csr_restore_dret_id_o = 1'b1;
 							ctrl_fsm_ns = 5'd10;
 						end
-						csr_status_i: begin
-							if (hwlp_end0_eq_pc && hwlp_counter0_gt_1) begin
+						csr_status_i:
+							if ((hwlp_end0_eq_pc && !hwlp_counter0_eq_0) || (hwlp_end1_eq_pc && !hwlp_counter1_eq_0)) begin
 								pc_mux_o = cv32e40p_pkg_PC_HWLOOP;
 								pc_set_o = 1'b1;
-								hwlp_dec_cnt_o[0] = 1'b1;
 							end
-							if (hwlp_end1_eq_pc && hwlp_counter1_gt_1) begin
-								pc_mux_o = cv32e40p_pkg_PC_HWLOOP;
-								pc_set_o = 1'b1;
-								hwlp_dec_cnt_o[1] = 1'b1;
-							end
-						end
 						wfi_i:
 							if (debug_req_pending) begin
 								ctrl_fsm_ns = 5'd12;
@@ -8782,6 +8890,7 @@ module cv32e40p_controller (
 			5'd10: begin
 				is_decoding_o = 1'b0;
 				ctrl_fsm_ns = 5'd5;
+				(* full_case, parallel_case *)
 				case (1'b1)
 					mret_dec_i: begin
 						pc_mux_o = (debug_mode_q ? cv32e40p_pkg_PC_EXCEPTION : cv32e40p_pkg_PC_MRET);
@@ -8899,9 +9008,9 @@ module cv32e40p_controller (
 		end
 		else begin : gen_no_hwlp
 			assign hwlp_jump_o = 1'b0;
-			wire [1:1] sv2v_tmp_23ABB;
-			assign sv2v_tmp_23ABB = 1'b0;
-			always @(*) hwlp_end_4_id_q = sv2v_tmp_23ABB;
+			wire [1:1] sv2v_tmp_64C4D;
+			assign sv2v_tmp_64C4D = 1'b0;
+			always @(*) hwlp_end_4_id_q = sv2v_tmp_64C4D;
 			assign hwlp_end0_eq_pc = 1'b0;
 			assign hwlp_end1_eq_pc = 1'b0;
 			assign hwlp_counter0_gt_1 = 1'b0;
@@ -9095,31 +9204,31 @@ module cv32e40p_obi_interface (
 	assign resp_err_o = obi_err_i;
 	generate
 		if (TRANS_STABLE) begin : gen_trans_stable
-			wire [1:1] sv2v_tmp_5942C;
-			assign sv2v_tmp_5942C = trans_valid_i;
-			always @(*) obi_req_o = sv2v_tmp_5942C;
-			wire [32:1] sv2v_tmp_54402;
-			assign sv2v_tmp_54402 = trans_addr_i;
-			always @(*) obi_addr_o = sv2v_tmp_54402;
-			wire [1:1] sv2v_tmp_0A6A4;
-			assign sv2v_tmp_0A6A4 = trans_we_i;
-			always @(*) obi_we_o = sv2v_tmp_0A6A4;
-			wire [4:1] sv2v_tmp_EEB82;
-			assign sv2v_tmp_EEB82 = trans_be_i;
-			always @(*) obi_be_o = sv2v_tmp_EEB82;
-			wire [32:1] sv2v_tmp_E96A4;
-			assign sv2v_tmp_E96A4 = trans_wdata_i;
-			always @(*) obi_wdata_o = sv2v_tmp_E96A4;
-			wire [6:1] sv2v_tmp_AE218;
-			assign sv2v_tmp_AE218 = trans_atop_i;
-			always @(*) obi_atop_o = sv2v_tmp_AE218;
+			wire [1:1] sv2v_tmp_642EA;
+			assign sv2v_tmp_642EA = trans_valid_i;
+			always @(*) obi_req_o = sv2v_tmp_642EA;
+			wire [32:1] sv2v_tmp_9F908;
+			assign sv2v_tmp_9F908 = trans_addr_i;
+			always @(*) obi_addr_o = sv2v_tmp_9F908;
+			wire [1:1] sv2v_tmp_DED80;
+			assign sv2v_tmp_DED80 = trans_we_i;
+			always @(*) obi_we_o = sv2v_tmp_DED80;
+			wire [4:1] sv2v_tmp_81239;
+			assign sv2v_tmp_81239 = trans_be_i;
+			always @(*) obi_be_o = sv2v_tmp_81239;
+			wire [32:1] sv2v_tmp_920BD;
+			assign sv2v_tmp_920BD = trans_wdata_i;
+			always @(*) obi_wdata_o = sv2v_tmp_920BD;
+			wire [6:1] sv2v_tmp_93628;
+			assign sv2v_tmp_93628 = trans_atop_i;
+			always @(*) obi_atop_o = sv2v_tmp_93628;
 			assign trans_ready_o = obi_gnt_i;
-			wire [1:1] sv2v_tmp_871E0;
-			assign sv2v_tmp_871E0 = 1'd0;
-			always @(*) state_q = sv2v_tmp_871E0;
-			wire [1:1] sv2v_tmp_E3915;
-			assign sv2v_tmp_E3915 = 1'd0;
-			always @(*) next_state = sv2v_tmp_E3915;
+			wire [1:1] sv2v_tmp_8A2DB;
+			assign sv2v_tmp_8A2DB = 1'd0;
+			always @(*) state_q = sv2v_tmp_8A2DB;
+			wire [1:1] sv2v_tmp_EEADD;
+			assign sv2v_tmp_EEADD = 1'd0;
+			always @(*) next_state = sv2v_tmp_EEADD;
 		end
 		else begin : gen_no_trans_stable
 			reg [31:0] obi_addr_q;
@@ -9330,12 +9439,12 @@ module cv32e40p_prefetch_controller (
 			assign fifo_flush_but_first_o = 1'b0;
 			assign hwlp_flush_resp = 1'b0;
 			assign hwlp_wait_resp_flush = 1'b0;
-			wire [1:1] sv2v_tmp_CF421;
-			assign sv2v_tmp_CF421 = 1'b0;
-			always @(*) hwlp_flush_after_resp = sv2v_tmp_CF421;
-			wire [(FIFO_ADDR_DEPTH >= 0 ? FIFO_ADDR_DEPTH + 1 : 1 - FIFO_ADDR_DEPTH):1] sv2v_tmp_424BD;
-			assign sv2v_tmp_424BD = 2'b00;
-			always @(*) hwlp_flush_cnt_delayed_q = sv2v_tmp_424BD;
+			wire [1:1] sv2v_tmp_844E5;
+			assign sv2v_tmp_844E5 = 1'b0;
+			always @(*) hwlp_flush_after_resp = sv2v_tmp_844E5;
+			wire [(FIFO_ADDR_DEPTH >= 0 ? FIFO_ADDR_DEPTH + 1 : 1 - FIFO_ADDR_DEPTH):1] sv2v_tmp_FC45B;
+			assign sv2v_tmp_FC45B = 2'b00;
+			always @(*) hwlp_flush_cnt_delayed_q = sv2v_tmp_FC45B;
 			assign hwlp_flush_resp_delayed = 1'b0;
 		end
 	endgenerate
@@ -9468,6 +9577,7 @@ module cv32e40p_core (
 	data_addr_o,
 	data_wdata_o,
 	data_rdata_i,
+	apu_busy_o,
 	apu_req_o,
 	apu_gnt_i,
 	apu_operands_o,
@@ -9515,6 +9625,7 @@ module cv32e40p_core (
 	output wire [31:0] data_addr_o;
 	output wire [31:0] data_wdata_o;
 	input wire [31:0] data_rdata_i;
+	output wire apu_busy_o;
 	output wire apu_req_o;
 	input wire apu_gnt_i;
 	localparam cv32e40p_apu_core_pkg_APU_NARGS_CPU = 3;
@@ -9574,7 +9685,6 @@ module cv32e40p_core (
 	wire ctrl_busy;
 	wire if_busy;
 	wire lsu_busy;
-	wire apu_busy;
 	wire [31:0] pc_ex;
 	wire alu_en_ex;
 	localparam cv32e40p_pkg_ALU_OP_WIDTH = 7;
@@ -9747,7 +9857,7 @@ module cv32e40p_core (
 		.if_busy_i(if_busy),
 		.ctrl_busy_i(ctrl_busy),
 		.lsu_busy_i(lsu_busy),
-		.apu_busy_i(apu_busy),
+		.apu_busy_i(apu_busy_o),
 		.pulp_clock_en_i(pulp_clock_en_i),
 		.p_elw_start_i(p_elw_start),
 		.p_elw_finish_i(p_elw_finish),
@@ -9899,7 +10009,7 @@ module cv32e40p_core (
 		.apu_write_regs_valid_o(apu_write_regs_valid),
 		.apu_write_dep_i(apu_write_dep),
 		.apu_perf_dep_o(perf_apu_dep),
-		.apu_busy_i(apu_busy),
+		.apu_busy_i(apu_busy_o),
 		.csr_access_ex_o(csr_access_ex),
 		.csr_op_ex_o(csr_op_ex),
 		.current_priv_lvl_i(current_priv_lvl),
@@ -10034,7 +10144,7 @@ module cv32e40p_core (
 		.apu_perf_cont_o(perf_apu_cont),
 		.apu_perf_wb_o(perf_apu_wb),
 		.apu_ready_wb_o(apu_ready_wb),
-		.apu_busy_o(apu_busy),
+		.apu_busy_o(apu_busy_o),
 		.apu_req_o(apu_req_o),
 		.apu_gnt_i(apu_gnt_i),
 		.apu_operands_o(apu_operands_o),
@@ -10193,7 +10303,7 @@ module cv32e40p_core (
 		sv2v_cast_12 = inp;
 	endfunction
 	assign csr_addr_int = sv2v_cast_12((csr_access_ex ? alu_operand_b_ex[11:0] : {12 {1'sb0}}));
-	assign fregs_we = (FPU & !ZFINX ? (regfile_alu_we_fw && regfile_alu_waddr_fw[5]) || (regfile_we_wb && regfile_waddr_fw_wb_o[5]) : 1'b0);
+	assign fregs_we = ((FPU == 1) & (ZFINX == 0) ? (regfile_alu_we_fw && regfile_alu_waddr_fw[5]) || (regfile_we_wb && regfile_waddr_fw_wb_o[5]) : 1'b0);
 	generate
 		if (1) begin : gen_no_pmp
 			assign instr_req_o = instr_req_pmp;
@@ -10290,7 +10400,7 @@ module cv32e40p_top (
 	output wire debug_halted_o;
 	input wire fetch_enable_i;
 	output wire core_sleep_o;
-	wire clk;
+	wire apu_busy;
 	wire apu_req;
 	localparam cv32e40p_apu_core_pkg_APU_NARGS_CPU = 3;
 	wire [95:0] apu_operands;
@@ -10303,6 +10413,8 @@ module cv32e40p_top (
 	wire [31:0] apu_rdata;
 	localparam cv32e40p_apu_core_pkg_APU_NUSFLAGS_CPU = 5;
 	wire [4:0] apu_rflags;
+	wire apu_clk_en;
+	wire apu_clk;
 	cv32e40p_core #(
 		.COREV_PULP(COREV_PULP),
 		.COREV_CLUSTER(COREV_CLUSTER),
@@ -10334,6 +10446,7 @@ module cv32e40p_top (
 		.data_addr_o(data_addr_o),
 		.data_wdata_o(data_wdata_o),
 		.data_rdata_i(data_rdata_i),
+		.apu_busy_o(apu_busy),
 		.apu_req_o(apu_req),
 		.apu_gnt_i(apu_gnt),
 		.apu_operands_o(apu_operands),
@@ -10354,17 +10467,18 @@ module cv32e40p_top (
 	);
 	generate
 		if (FPU) begin : fpu_gen
+			assign apu_clk_en = apu_req | apu_busy;
 			cv32e40p_clock_gate core_clock_gate_i(
 				.clk_i(clk_i),
-				.en_i(!core_sleep_o),
+				.en_i(apu_clk_en),
 				.scan_cg_en_i(scan_cg_en_i),
-				.clk_o(clk)
+				.clk_o(apu_clk)
 			);
 			cv32e40p_fp_wrapper #(
 				.FPU_ADDMUL_LAT(FPU_ADDMUL_LAT),
 				.FPU_OTHERS_LAT(FPU_OTHERS_LAT)
 			) fp_wrapper_i(
-				.clk_i(clk),
+				.clk_i(apu_clk),
 				.rst_ni(rst_ni),
 				.apu_req_i(apu_req),
 				.apu_gnt_o(apu_gnt),

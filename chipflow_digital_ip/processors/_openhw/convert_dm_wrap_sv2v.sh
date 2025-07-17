@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 set -ex
 
-DESIGN_RTL_DIR=3rdparty/cv32e40p/rtl
-DEBUG_RTL_DIR=3rdparty/riscv-dbg/src
-COMMON_CELLS=3rdparty/cv32e40p/rtl/vendor/pulp_platform_common_cells
+VERILOG_PATH="${VERILOG_DIR:=$PWD/verilog}"
+CV32E40P_PATH="${CV32E40P_DIR:=../../../vendor/cv32e40p}"
+RISCV_DBG_PATH="${RISCV_DBG_PATH:=../../../vendor/riscv-dbg}"
+
+DESIGN_RTL_DIR=$CV32E40P_PATH/rtl
+DEBUG_RTL_DIR=$RISCV_DBG_PATH/src
+COMMON_CELLS=$CV32E40P_PATH/rtl/vendor/pulp_platform_common_cells
 
 sv2v -D SYNTHESIS -D PULP_FPGA_EMUL \
 	-I ${DESIGN_RTL_DIR}/include \
-	-w ./amaranth_cv32e40p/verilog/dm_wrap_conv_sv2v.v \
+	-w ${VERILOG_PATH}/dm_wrap_conv_sv2v.v \
 	--top dm_wrap \
 	${DEBUG_RTL_DIR}/dm_pkg.sv \
 	${DEBUG_RTL_DIR}/dm_csrs.sv \

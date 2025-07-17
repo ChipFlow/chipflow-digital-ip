@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -ex
 
-DESIGN_RTL_DIR=${DESIGN_RTL_DIR:=../../../vendor/openhwgroup/cv32e40p/rtl}
+CV32E40P_PATH="${CV32E40P_DIR:=../../../vendor/cv32e40p}"
+DESIGN_RTL_DIR="$CV32E40P_PATH/rtl"
 
 sv2v -D SYNTHESIS -D PULP_FPGA_EMUL \
 	--top cv32e40p_top \
