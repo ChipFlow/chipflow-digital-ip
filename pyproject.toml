@@ -42,6 +42,7 @@ reportUnboundVariable = false
 [tool.ruff.lint]
 select = ['E4', 'E7', 'E9', 'F', 'W291', 'W293']
 ignore = ['F403', 'F405', 'F841']
+exclude = ["vendor/**"]
 
 [tool.pdm.version]
 source = "scm"
