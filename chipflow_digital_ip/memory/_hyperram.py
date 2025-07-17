@@ -19,7 +19,32 @@ __all__ = ["HyperRAM"]
 
 
 class HyperRAM(wiring.Component):
+    """
+    HyperRAM.interface
+
+    Provides a very simple/minimal HyperRAM core that should work with all FPGA/HyperRam chips:
+    - FPGA vendor agnostic.
+    - no setup/chip configuration (use default latency).
+
+    This core favors portability and ease of use over performance.
+
+    Params:
+        mem_name: Nane of this memory
+        cs_count: Number of Chip Select lines to instantiate
+        init_latency: Initial latency in clock cycles for a transaction
+    """
+
     class Signature(wiring.Signature):
+        """
+        IO signature for Hyperram interdace
+
+        Params:
+            clk: Clock output
+            csn: Chip Select lines (width `cs_count`)
+            rstn: Hardware Reset
+            rwds: Read/Write Data Strobe
+            dq: Data Input/Output.
+        """
         def __init__(self, *, cs_count=1):
             super().__init__({
                 "clk": Out(OutputIOSignature(1)),
@@ -38,14 +63,6 @@ class HyperRAM(wiring.Component):
     class HRAMConfig(csr.Register, access="w"):
         val: csr.Field(csr.action.W, unsigned(32))
 
-    """HyperRAM.
-
-    Provides a very simple/minimal HyperRAM core that should work with all FPGA/HyperRam chips:
-    - FPGA vendor agnostic.
-    - no setup/chip configuration (use default latency).
-
-    This core favors portability and ease of use over performance.
-    """
     def __init__(self, mem_name=("mem",), *, cs_count=1, init_latency=7):
         self.cs_count = cs_count
         self.size = 2**23 * self.cs_count # 8MB per CS pin

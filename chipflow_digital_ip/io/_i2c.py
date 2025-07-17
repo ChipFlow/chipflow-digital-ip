@@ -4,7 +4,7 @@ from amaranth.lib.wiring import In, Out, connect, flipped
 
 from amaranth_soc import csr
 from chipflow_lib.platforms import BidirIOSignature
-from .glasgow_i2c import I2CInitiator
+from ._glasgow_i2c import I2CInitiator
 
 __all__ = ["I2CPeripheral", "I2CSignature"]
 

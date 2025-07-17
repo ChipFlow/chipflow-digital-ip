@@ -6,12 +6,11 @@ from amaranth.utils import exact_log2
 from amaranth_soc import wishbone, csr
 from amaranth_soc.memory import MemoryMap
 
-from chipflow_digital_ip.io.glasgow_iostream import PortGroup
-from chipflow_digital_ip.memory.glasgow_qspi import QSPIMode, QSPIController
+from ..io._glasgow_iostream import PortGroup
+from ..memory._glasgow_qspi import QSPIMode, QSPIController
 
 from chipflow_lib.platforms import BidirIOSignature, OutputIOSignature
 
-__all__ = ["QSPIFlash"]
 
 class QSPIFlashCommand(enum.Enum, shape=8):
     Read                = 0x03

@@ -2,10 +2,7 @@ from amaranth import *
 from amaranth.lib import enum, data, wiring, stream, io
 from amaranth.lib.wiring import In, Out, connect, flipped
 
-from chipflow_digital_ip.io.glasgow_iostream import IOStreamer, IOClocker, PortGroup
-
-
-__all__ = ["QSPIMode", "QSPIEnframer", "QSPIDeframer", "QSPIController"]
+from ..io._glasgow_iostream import IOStreamer, IOClocker, PortGroup
 
 
 class QSPIMode(enum.Enum, shape=3):
