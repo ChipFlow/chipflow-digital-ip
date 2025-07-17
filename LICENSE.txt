@@ -1,3 +1,5 @@
+Copyright (C) 2022-2025 ChipFlow Limited
+Copyright (C) 2024-2025 Glasgow Interface Explorer contributors
 Copyright (C) 2019-2021 Amaranth HDL contributors
 Copyright (C) 2011-2019 M-Labs Limited
 

@@ -8,9 +8,12 @@ authors = [
     {name = "Myrtle Shah", email = "gatecat@ds0.me" },
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {file = "LICENSE.txt"}
+license-files = [
+    "LICENSE*",
+    "vendor/*/*/LICEN?E*",
+]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "amaranth>=0.5,<0.6",
     "chipflow-lib @ git+https://github.com/ChipFlow/chipflow-lib.git",
@@ -23,6 +26,9 @@ dependencies = [
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
+
+[tool.pdm.build]
+includes = ["**/*.py", "**/*.v", "**/*.yaml"]
 
 # Development workflow configuration
 
@@ -48,7 +54,6 @@ test-docs.cmd = "true"
 lint.cmd = "ruff check"
 #docs.cmd = "sphinx-build docs/ docs/_build/ -W --keep-going"
 doc.cmd = "true"
-
 
 [dependency-groups]
 dev = [
