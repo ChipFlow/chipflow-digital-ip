@@ -118,7 +118,7 @@ class HyperRAM(wiring.Component):
             self.data_bus.dat_r.eq(sr[:32]),
         ]
 
-        with m.FSM() as fsm:
+        with m.FSM():
             with m.State("IDLE"):
                 m.d.sync += [
                     counter.eq(0),

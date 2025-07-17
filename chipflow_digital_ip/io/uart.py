@@ -45,7 +45,7 @@ class UARTPhyRx(wiring.Component):
                 ]
 
         with m.If(self.symbols.ready):
-            m.d.sync += self.symbols.valid.eq(0)     
+            m.d.sync += self.symbols.valid.eq(0)
 
         m.d.comb += [
             lower.i.eq(self._port.i),

@@ -194,7 +194,7 @@ class CV32E40P(wiring.Component):
         connect(m, dbus_adapt.wb, flipped(self.dbus))
 
         if platform is not None:
-            path = Path(__file__).parent / f"verilog/cv32e40p_conv_sv2v.v"
+            path = Path(__file__).parent / "verilog/cv32e40p_conv_sv2v.v"
             with open(path, 'r') as f:
                 platform.add_file(path.name, f)
         return m
@@ -260,7 +260,7 @@ class OBIDebugModule(wiring.Component):
         connect(m, tgt_adapt.wb, flipped(self.target))
 
         if platform is not None:
-            path = Path(__file__).parent / f"verilog/dm_wrap_conv_sv2v.v"
+            path = Path(__file__).parent / "verilog/dm_wrap_conv_sv2v.v"
             with open(path, 'r') as f:
                 platform.add_file(path.name, f)
 

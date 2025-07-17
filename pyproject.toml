@@ -40,6 +40,7 @@ reportMissingImports = false
 reportUnboundVariable = false
 
 [tool.ruff.lint]
+select = ['E4', 'E7', 'E9', 'F', 'W291', 'W293']
 ignore = ['F403', 'F405', 'F841']
 
 [tool.pdm.version]
@@ -51,7 +52,7 @@ test-cov.cmd = "pytest --cov=chipflow-digital-ip cov-report=term"
 test-cov-html.cmd = "pytest --cov=chipflow-digital-ip --cov-report=html"
 # test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
 test-docs.cmd = "true"
-lint.cmd = "ruff check"
+lint.composite = ["./tools/license_check.sh", "ruff check"]
 #docs.cmd = "sphinx-build docs/ docs/_build/ -W --keep-going"
 doc.cmd = "true"
 
