@@ -7,7 +7,7 @@ from amaranth.lib import enum, data, wiring, stream
 from amaranth.lib.wiring import In, Out, connect
 from amaranth.sim import *
 
-from chipflow_digital_ip.memory.qspi_flash import WishboneQSPIFlashController, QSPIMode
+from chipflow_digital_ip.memory._qspi_flash import WishboneQSPIFlashController, QSPIMode
 
 
 class _QSPIFlashCommand(enum.Enum, shape=8):
