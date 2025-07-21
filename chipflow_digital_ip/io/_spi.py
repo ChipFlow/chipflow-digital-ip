@@ -14,6 +14,7 @@ SPISignature = wiring.Signature({
     "csn": Out(OutputIOSignature(1)),
 })
 
+
 class SPIController(wiring.Component):
     def __init__(self):
         super().__init__({
@@ -141,18 +142,23 @@ class SPIPeripheral(wiring.Component):
         """recv_full is 1 when transfer has been completed. reset to zero by reading receive_data"""
         recv_full: csr.Field(csr.action.R, unsigned(1))
 
-
     """
     A custom, minimal SPI controller
     """
+
     def __init__(self):
         regs = csr.Builder(addr_width=5, data_width=8)
 
-        self._config       = regs.add("config",       self.Config(),      offset=0x00)
-        self._divider      = regs.add("divider",      self.Divider(),     offset=0x04)
-        self._send_data    = regs.add("send_data",    self.SendData(),    offset=0x08)
-        self._receive_data = regs.add("receive_data", self.ReceiveData(), offset=0x0C)
-        self._status       = regs.add("status",       self.Status(),      offset=0x10)
+        self._config = regs.add(
+            "config",       self.Config(),      offset=0x00)
+        self._divider = regs.add(
+            "divider",      self.Divider(),     offset=0x04)
+        self._send_data = regs.add(
+            "send_data",    self.SendData(),    offset=0x08)
+        self._receive_data = regs.add(
+            "receive_data", self.ReceiveData(), offset=0x0C)
+        self._status = regs.add(
+            "status",       self.Status(),      offset=0x10)
 
         self._bridge = csr.Bridge(regs.as_memory_map())
 
