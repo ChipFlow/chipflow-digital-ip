@@ -52,6 +52,8 @@ jobs:
     env:
       DRY: ${{ matrix.dry && '--dry-run' || '' }}
       IS_DRY: ${{ matrix.dry && '(dry run)' || '' }}
+      CHIPFLOW_API_ORIGIN: ${{ vars.CHIPFLOW_API_ORIGIN }}
+      CHIPFLOW_BACKEND_VERSION: ${{ vars.CHIPFLOW_BACKEND_VERSION }}
     name:  ${{ matrix.dry && 'Test Submit - Dry run' || 'Test submit' }}
 
     steps:
@@ -92,3 +94,5 @@ jobs:
           pdm run chipflow silicon submit --wait $DRY
         env:
           CHIPFLOW_API_KEY: ${{ secrets.CHIPFLOW_API_KEY}}
+          CHIPFLOW_API_ORIGIN: ${{ env.CHIPFLOW_API_ORIGIN }}
+          CHIPFLOW_BACKEND_VERSION: ${{ env.CHIPFLOW_BACKEND_VERSION }}
