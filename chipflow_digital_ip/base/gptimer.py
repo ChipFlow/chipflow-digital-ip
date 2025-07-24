@@ -26,7 +26,7 @@ class GPTimer(Elaboratable):
         self.presc = csr.Register(width=8)
         # COMPARE: target value for match
         self.compare = csr.Register(width=32)
-        # COUNT: current counter value (read-only)
+        # COUNT: current counter value (read-only) 
         self.count = csr.Register(width=32)
         # STATUS: [0]=MATCH flag (W1C)
         self.status = csr.Register(width=8)
