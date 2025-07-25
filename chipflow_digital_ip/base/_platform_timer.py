@@ -1,8 +1,9 @@
 from amaranth import *
 from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, flipped, connect
-
 from amaranth_soc import csr
+
+from chipflow_lib.platforms import DriverSignature
 
 
 __all__ = ["PlatformTimer"]
@@ -34,10 +35,19 @@ class PlatformTimer(wiring.Component):
 
         self._bridge = csr.Bridge(regs.as_memory_map())
 
-        super().__init__({
-            "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
-            "irq": Out(unsigned(1)),
-        })
+        super().__init__(
+            DriverSignature(
+                members={
+                    "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
+                    "irq": Out(unsigned(1)),
+                },
+                component=self,
+                regs_struct='plat_timer_regs_t',
+                c_files=['drivers/plat_timer.c'],
+                h_files=['drivers/plat_timer.h'],
+                )
+            )
+
         self.bus.memory_map = self._bridge.bus.memory_map
 
     def elaborate(self, platform):

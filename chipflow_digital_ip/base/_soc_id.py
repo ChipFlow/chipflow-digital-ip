@@ -6,6 +6,7 @@ from amaranth.lib.wiring import In, flipped, connect
 
 from amaranth_soc import csr
 
+from chipflow_lib.platforms import DriverSignature
 
 __all__ = ["SoCID"]
 
@@ -31,10 +32,16 @@ class SoCID(wiring.Component):
         self._soc_version = regs.add("soc_version", self.Register(32), offset=0x4)
 
         self._bridge = csr.Bridge(regs.as_memory_map())
+        super().__init__(
+            DriverSignature(
+                members={
+                    "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
+                },
+                component=self,
+                regs_struct='soc_id_regs_t',
+                h_files=['drivers/soc_id.h'])
+            )
 
-        super().__init__({
-            "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
-        })
         self.bus.memory_map = self._bridge.bus.memory_map
 
     def elaborate(self, platform):

@@ -3,9 +3,11 @@ from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, connect, flipped
 
 from amaranth_soc import csr
-from chipflow_lib.platforms import SPISignature
+from chipflow_lib.platforms import SPISignature, DriverSignature
+
 
 __all__ = ["SPIPeripheral"]
+
 
 class SPIController(wiring.Component):
     def __init__(self):
@@ -149,10 +151,18 @@ class SPIPeripheral(wiring.Component):
 
         self._bridge = csr.Bridge(regs.as_memory_map())
 
-        super().__init__({
-            "spi_pins": Out(SPISignature()),
-            "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
-        })
+        super().__init__(
+            DriverSignature(
+                members={
+                    "spi_pins": Out(SPISignature()),
+                    "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
+                },
+                component=self,
+                regs_struct='spi_regs_t',
+                c_files=['drivers/spi.c'],
+                h_files=['drivers/spi.h'])
+            )
+
         self.bus.memory_map = self._bridge.bus.memory_map
 
     def elaborate(self, platform):
