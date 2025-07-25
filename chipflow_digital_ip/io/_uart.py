@@ -5,7 +5,7 @@ from amaranth.lib.wiring import In, Out, flipped, connect
 from amaranth_soc import csr
 from amaranth_stdio.serial import AsyncSerialRX, AsyncSerialTX
 
-from chipflow_lib.platforms import OutputIOSignature, InputIOSignature
+from chipflow_lib.platforms import UARTSignature
 
 from . import _rfc_uart
 
@@ -120,14 +120,6 @@ class UARTPhy(wiring.Component):
 
 class UARTPeripheral(wiring.Component):
 
-    class Signature(wiring.Signature):
-        def __init__(self):
-            super().__init__({
-                "tx": Out(OutputIOSignature(1)),
-                "rx": Out(InputIOSignature(1)),
-            })
-
-
     """Wrapper for amaranth_soc RFC UART with PHY and chipflow_lib.IOSignature support
 
     Parameters
@@ -159,7 +151,7 @@ class UARTPeripheral(wiring.Component):
 
         super().__init__({
             "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
-            "pins": Out(self.Signature()),
+            "pins": Out(UARTSignature()),
         })
         self.bus.memory_map = self._uart.bus.memory_map
         self._phy = UARTPhy(ports=self.pins, init_divisor=init_divisor)

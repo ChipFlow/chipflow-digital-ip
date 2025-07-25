@@ -9,7 +9,7 @@ from amaranth_soc.memory import MemoryMap
 from ..io._glasgow_iostream import PortGroup
 from ..memory._glasgow_qspi import QSPIMode, QSPIController
 
-from chipflow_lib.platforms import BidirIOSignature, OutputIOSignature
+from chipflow_lib.platforms import QSPIFlashSignature
 
 
 class QSPIFlashCommand(enum.Enum, shape=8):
@@ -248,17 +248,9 @@ class WishboneQSPIFlashController(wiring.Component):
         return m
 
 class QSPIFlash(wiring.Component):
-    class Signature(wiring.Signature):
-        def __init__(self):
-            super().__init__({
-                "clk": Out(OutputIOSignature(1)),
-                "csn": Out(OutputIOSignature(1)),
-                "d": Out(BidirIOSignature(4, individual_oe=True)),
-            })
-
     def __init__(self, *, addr_width, data_width):
         super().__init__({
-            "pins": Out(self.Signature()),
+            "pins": Out(QSPIFlashSignature()),
             "csr_bus": In(csr.Signature(addr_width=4, data_width=8)),
             "wb_bus": In(wishbone.Signature(addr_width=addr_width, data_width=data_width, granularity=8)),
         })
