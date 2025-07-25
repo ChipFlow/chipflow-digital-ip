@@ -5,7 +5,8 @@ from amaranth.lib.wiring import In, Out, flipped, connect
 
 from amaranth_soc import csr, gpio
 
-from chipflow_lib.platforms import GPIOSignature
+from chipflow_lib.platforms import GPIOSignature, SoftwareDriverSignature
+
 
 __all__ = ["GPIOPeripheral"]
 
@@ -55,12 +56,18 @@ class GPIOPeripheral(wiring.Component):
                                      addr_width=addr_width,
                                      data_width=data_width,
                                      input_stages=input_stages)
+        super().__init__(
+            SoftwareDriverSignature(
+                members={
+                    "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
+                    "pins": Out(GPIOSignature(pin_count)),
+                    "alt_mode": Out(unsigned(pin_count)),
+                },
+                component=self,
+                regs_struct='gpio_regs_t',
+                h_files=['drivers/gpio.h'])
+            )
 
-        super().__init__({
-            "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
-            "pins": Out(GPIOSignature(pin_count)),
-            "alt_mode": Out(unsigned(pin_count)),
-        })
         self.bus.memory_map = self._gpio.bus.memory_map
 
     def elaborate(self, platform):

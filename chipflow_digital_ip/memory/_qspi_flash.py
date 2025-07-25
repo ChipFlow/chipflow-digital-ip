@@ -9,7 +9,7 @@ from amaranth_soc.memory import MemoryMap
 from ..io._glasgow_iostream import PortGroup
 from ..memory._glasgow_qspi import QSPIMode, QSPIController
 
-from chipflow_lib.platforms import QSPIFlashSignature
+from chipflow_lib.platforms import QSPIFlashSignature, SoftwareDriverSignature
 
 
 class QSPIFlashCommand(enum.Enum, shape=8):
@@ -20,11 +20,13 @@ class QSPIFlashCommand(enum.Enum, shape=8):
     FastReadDualInOut   = 0xBB
     FastReadQuadInOut   = 0xEB
 
+
 class QSPIFlashWidth(enum.Enum, shape=2):
     X1                = 0x00
     X1Fast            = 0x01
     X2                = 0x02
     X4                = 0x03
+
 
 class _RawTxDataField(csr.FieldAction):
     """A field that is read/write and exposes a strobe"""
@@ -51,6 +53,7 @@ class _RawTxDataField(csr.FieldAction):
 
         return m
 
+
 class WishboneQSPIFlashController(wiring.Component):
 
     class Config(csr.Register, access="rw"):
@@ -67,7 +70,6 @@ class WishboneQSPIFlashController(wiring.Component):
 
     class RawRxData(csr.Register, access="rw"):
         data: csr.Field(csr.action.R, 8)
-
 
     def __init__(self, *, addr_width, data_width):
         super().__init__({
@@ -247,13 +249,23 @@ class WishboneQSPIFlashController(wiring.Component):
             m.d.comb += self._raw_control.f.ready.r_data.eq(fsm.ongoing("Raw-Wait"))
         return m
 
+
 class QSPIFlash(wiring.Component):
     def __init__(self, *, addr_width, data_width):
-        super().__init__({
-            "pins": Out(QSPIFlashSignature()),
-            "csr_bus": In(csr.Signature(addr_width=4, data_width=8)),
-            "wb_bus": In(wishbone.Signature(addr_width=addr_width, data_width=data_width, granularity=8)),
-        })
+        super().__init__(
+            SoftwareDriverSignature(
+                members={
+                    "pins": Out(QSPIFlashSignature()),
+                    "csr_bus": In(csr.Signature(addr_width=4, data_width=8)),
+                    "wb_bus": In(wishbone.Signature(addr_width=addr_width, data_width=data_width, granularity=8)),
+                },
+                component=self,
+                regs_struct='spiflash_regs_t',
+                regs_bus="csr_bus",
+                c_files=['drivers/spiflash.c', 'drivers/spiflash.S'],
+                h_files=['drivers/spiflash.h'],
+                )
+            )
 
         self._ctrl = WishboneQSPIFlashController(addr_width=addr_width, data_width=data_width)
         self.csr_bus.memory_map = self._ctrl.csr_bus.memory_map
