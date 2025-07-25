@@ -1,4 +1,3 @@
-from typing import Unpack
 
 from amaranth import Module, unsigned
 from amaranth.lib import wiring
@@ -6,25 +5,12 @@ from amaranth.lib.wiring import In, Out, flipped, connect
 
 from amaranth_soc import csr, gpio
 
-from chipflow_lib.platforms import BidirIOSignature, IOModelOptions
+from chipflow_lib.platforms import GPIOSignature
 
 __all__ = ["GPIOPeripheral"]
 
 
 class GPIOPeripheral(wiring.Component):
-
-    class Signature(wiring.Signature):
-        def __init__(self, pin_count=1, **kwargs: Unpack[IOModelOptions]):
-            if pin_count > 32:
-                raise ValueError(f"Pin pin_count must be lesser than or equal to 32, not {pin_count}")
-            self._pin_count = pin_count
-            super().__init__({
-                "gpio": Out(BidirIOSignature(pin_count, individual_oe=True, **kwargs))
-                })
-
-        @property
-        def pin_count(self):
-            return self._pin_count
 
     """Wrapper for amaranth_soc gpio with chipflow_lib.IOSignature support
 
@@ -65,7 +51,7 @@ class GPIOPeripheral(wiring.Component):
 
         super().__init__({
             "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
-            "pins": Out(self.Signature(pin_count)),
+            "pins": Out(GPIOSignature(pin_count)),
             "alt_mode": Out(unsigned(pin_count)),
         })
         self.bus.memory_map = self._gpio.bus.memory_map

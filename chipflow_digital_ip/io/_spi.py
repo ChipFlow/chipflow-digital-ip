@@ -3,21 +3,14 @@ from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, connect, flipped
 
 from amaranth_soc import csr
-from chipflow_lib.platforms import InputIOSignature, OutputIOSignature
+from chipflow_lib.platforms import SPISignature
 
-__all__ = ["SPISignature", "SPIPeripheral"]
-
-SPISignature = wiring.Signature({
-    "sck": Out(OutputIOSignature(1)),
-    "copi": Out(OutputIOSignature(1)),
-    "cipo": Out(InputIOSignature(1)),
-    "csn": Out(OutputIOSignature(1)),
-})
+__all__ = ["SPIPeripheral"]
 
 class SPIController(wiring.Component):
     def __init__(self):
         super().__init__({
-            "spi": Out(SPISignature),
+            "spi": Out(SPISignature()),
             "sck_idle": In(1),
             "sck_edge": In(1),
             "cs": In(1),
@@ -157,7 +150,7 @@ class SPIPeripheral(wiring.Component):
         self._bridge = csr.Bridge(regs.as_memory_map())
 
         super().__init__({
-            "spi_pins": Out(SPISignature),
+            "spi_pins": Out(SPISignature()),
             "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
         })
         self.bus.memory_map = self._bridge.bus.memory_map

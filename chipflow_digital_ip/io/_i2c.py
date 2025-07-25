@@ -3,15 +3,10 @@ from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, connect, flipped
 
 from amaranth_soc import csr
-from chipflow_lib.platforms import BidirIOSignature
+from chipflow_lib.platforms import I2CSignature
 from ._glasgow_i2c import I2CInitiator
 
-__all__ = ["I2CPeripheral", "I2CSignature"]
-
-I2CSignature = wiring.Signature({
-    "scl": Out(BidirIOSignature(1)),
-    "sda": Out(BidirIOSignature(1))
-    })
+__all__ = ["I2CPeripheral"]
 
 
 class I2CPeripheral(wiring.Component):
@@ -61,7 +56,7 @@ class I2CPeripheral(wiring.Component):
         self._bridge = csr.Bridge(regs.as_memory_map())
 
         super().__init__({
-            "i2c_pins": Out(I2CSignature),
+            "i2c_pins": Out(I2CSignature()),
             "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
         })
         self.bus.memory_map = self._bridge.bus.memory_map
