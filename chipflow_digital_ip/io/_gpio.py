@@ -44,6 +44,9 @@ class GPIOPeripheral(wiring.Component):
     """
 
     def __init__(self, *, pin_count, addr_width=4, data_width=8, input_stages=2):
+        if pin_count > 32:
+            # TODO: why?
+            raise ValueError(f"Pin pin_count must be lesser than or equal to 32, not {pin_count}")
         self._gpio = gpio.Peripheral(pin_count=pin_count,
                                      addr_width=addr_width,
                                      data_width=data_width,
