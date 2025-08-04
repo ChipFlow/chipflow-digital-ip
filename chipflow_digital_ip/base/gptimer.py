@@ -6,31 +6,6 @@ from amaranth_soc import csr
 
 __all__ = ["GPTimer"]
 
-class Ctrl(csr.Register, access="rw"):
-    """CTRL: [0]=EN, [1]=RST, [2]=AR, [3]=IRQ_EN"""
-    en: csr.Field(csr.action.RW, unsigned(1))
-    rst: csr.Field(csr.action.RW, unsigned(1))
-    ar: csr.Field(csr.action.RW, unsigned(1))
-    irq_en: csr.Field(csr.action.RW, unsigned(1))
-    # bits [4:8) reserved
-
-class Presc(csr.Register, access="rw"):
-    """Prescaler divisor (0 => /1, 255 => /256)"""
-    val: csr.Field(csr.action.RW, unsigned(8))
-
-class Compare(csr.Register, access="rw"):
-    """32-bit compare value"""
-    val: csr.Field(csr.action.RW, unsigned(32))
-
-class Count(csr.Register, access="r"):
-    """32-bit free-running counter (read-only)"""
-    val: csr.Field(csr.action.R, unsigned(32))
-
-class Status(csr.Register, access="rw"):
-    """STATUS: [0]=MATCH (W1C)"""
-    match: csr.Field(csr.action.RW1C, unsigned(1))
-    # bits [1:8) reserved
-
 class GPTimer(Component):
     """
     General-Purpose Timer:
@@ -39,14 +14,40 @@ class GPTimer(Component):
       - compare match + auto-reload
       - level-high IRQ on match
     """
+    class Ctrl(csr.Register, access="rw"):
+        """CTRL: [0]=EN, [1]=RST, [2]=AR, [3]=IRQ_EN"""
+        en: csr.Field(csr.action.RW, unsigned(1))
+        rst: csr.Field(csr.action.RW, unsigned(1))
+        ar: csr.Field(csr.action.RW, unsigned(1))
+        irq_en: csr.Field(csr.action.RW, unsigned(1))
+        # bits [4:8) reserved
+
+    class Presc(csr.Register, access="rw"):
+        """Prescaler divisor (0 => /1, 255 => /256)"""
+        val: csr.Field(csr.action.RW, unsigned(8))
+
+    class Compare(csr.Register, access="rw"):
+        """32-bit compare value"""
+        val: csr.Field(csr.action.RW, unsigned(32))
+
+    class Count(csr.Register, access="r"):
+        """32-bit free-running counter (read-only)"""
+        val: csr.Field(csr.action.R, unsigned(32))
+
+    class Status(csr.Register, access="rw"):
+        """STATUS: [0]=MATCH (W1C)"""
+        match: csr.Field(csr.action.RW1C, unsigned(1))
+        # bits [1:8) reserved
+
+
     def __init__(self):
         # CSR bank: 5-bit address, 8-bit data bus
         regs = csr.Builder(addr_width=5, data_width=8)
-        self._ctrl    = regs.add("ctrl",    Ctrl(),    offset=0x00)
-        self._presc   = regs.add("presc",   Presc(),   offset=0x04)
-        self._count   = regs.add("count",   Count(),   offset=0x08)
-        self._compare = regs.add("compare", Compare(), offset=0x0C)
-        self._status  = regs.add("status",  Status(),  offset=0x10)
+        self._ctrl    = regs.add("ctrl",    self.Ctrl(),    offset=0x00)
+        self._presc   = regs.add("presc",   self.Presc(),   offset=0x04)
+        self._count   = regs.add("count",   self.Count(),   offset=0x08)
+        self._compare = regs.add("compare", self.Compare(), offset=0x0C)
+        self._status  = regs.add("status",  self.Status(),  offset=0x10)
 
         # CSR bridge
         self._bridge = csr.Bridge(regs.as_memory_map())
@@ -68,54 +69,59 @@ class GPTimer(Component):
 
     def elaborate(self, platform):
         m = Module()
+        # hook up the CSR bridge
         m.submodules.bridge = self._bridge
-
         connect(m, flipped(self.bus), self._bridge.bus)
 
-        ctrl_f    = self._ctrl.f
-        presc_f   = self._presc.f
-        cmp_f     = self._compare.f
-        cnt_f     = self._count.f
-        status_f  = self._status.f
+        # shorthands to the field-ports
+        ctrl   = self._ctrl.f
+        presc  = self._presc.f
+        cmp_   = self._compare.f
+        cnt    = self._count.f
+        status = self._status.f
 
-        prescaler_cnt = self._prescaler_cnt
-        counter       = self._counter
-        match_flag    = self._match_flag
+        p_cnt  = self._prescaler_cnt
+        cnt_r  = self._counter
+        mflag  = self._match_flag
 
-        # Default IRQ low
-        m.d.comb += self.irq.eq(0)
-
-        # ---- prescaler & counter ----
-        with m.If(ctrl_f.rst):
+        # -- prescaler & counter logic --
+        with m.If(ctrl.rst.data):
             m.d.sync += [
-                prescaler_cnt.eq(0),
-                counter.eq(0),
-                match_flag.eq(0),
+                p_cnt.eq(0),
+                cnt_r.eq(0),
+                mflag.eq(0),
             ]
-        with m.Elif(ctrl_f.en):
-            with m.If(prescaler_cnt == presc_f.val):
+        with m.Elif(ctrl.en.data):
+            with m.If(p_cnt == presc.val.data):
                 m.d.sync += [
-                    prescaler_cnt.eq(0),
-                    counter.eq(counter + 1),
+                    p_cnt.eq(0),
+                    cnt_r.eq(cnt_r + 1),
                 ]
             with m.Else():
-                m.d.sync += prescaler_cnt.eq(prescaler_cnt + 1)
+                m.d.sync += p_cnt.eq(p_cnt + 1)
 
-        # ---- compare & match ----
-        with m.If((counter == cmp_f.val) & ctrl_f.en):
-            m.d.sync += match_flag.eq(1)
-            with m.If(ctrl_f.ar):
-                m.d.sync += counter.eq(0)
+        # -- compare & auto-reload --
+        with m.If((cnt_r == cmp_.val.data) & ctrl.en.data):
+            m.d.sync += mflag.eq(1)
+            with m.If(ctrl.ar.data):
+                m.d.sync += cnt_r.eq(0)
 
-        # ---- IRQ ----
-        with m.If(match_flag & ctrl_f.irq_en):
-            m.d.comb += self.irq.eq(1)
+        # -- IRQ output (level-high) --
+        m.d.comb += self.irq.eq(mflag & ctrl.irq_en.data)
 
-        # ---- mirror counter & status ----
-        m.d.comb += cnt_f.val.eq(counter)
-        # W1C clear
-        with m.If(status_f.w_stb & status_f.w_data[0]):
-            m.d.sync += match_flag.eq(0)
-        m.d.comb += status_f.match.eq(match_flag)
+        # -- mirror into CSRs --
+        # COUNT read portc
+        m.d.comb += cnt.val.r_data.eq(cnt_r)
+        # STATUS.MATCH read port
+        m.d.comb += status.match.data.eq(mflag)
+
+        # write-1-to-clear: if SW writes a ‘1’, clear the flag
+        with m.If(status.match.w_stb & status.match.w_data):
+            m.d.sync += mflag.eq(0)
 
         return m
+
+
+
+
+                
