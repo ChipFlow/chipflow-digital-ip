@@ -9,3 +9,6 @@ __pycache__/
 /.pdm-build
 /.venv
 /pdm.lock
+
+*.vcd
+*.gtkw

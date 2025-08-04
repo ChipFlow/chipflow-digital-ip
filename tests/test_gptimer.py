@@ -3,7 +3,7 @@
 
 from amaranth import *
 from amaranth.sim import Simulator
-from chipflow_digital_ip.base.gptimer import GPTimer
+from chipflow_digital_ip.base import GPTimer
 import unittest
 
 
