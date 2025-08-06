@@ -1,19 +1,21 @@
 from amaranth import Module, Signal, unsigned
+from amaranth.lib import wiring
 from amaranth.lib.wiring import Component, In, Out , connect, flipped
 
 from amaranth_soc import csr
+#from chipflow_lib.platforms import InputIOSignature, OutputIOSignature
 
 
 __all__ = ["GPTimer"]
 
+'''
+GPTIMERSignature = wiring.Signature({
+    "irq" : Out(OutputIOSignature),
+    "bus" : Out(InputIOSignature)
+ })
+'''
+
 class GPTimer(Component):
-    """
-    General-Purpose Timer:
-      - 32-bit up-counter
-      - 8-bit prescaler
-      - compare match + auto-reload
-      - level-high IRQ on match
-    """
     class Ctrl(csr.Register, access="rw"):
         """CTRL: [0]=EN, [1]=RST, [2]=AR, [3]=IRQ_EN"""
         en: csr.Field(csr.action.RW, unsigned(1))
@@ -39,6 +41,13 @@ class GPTimer(Component):
         match: csr.Field(csr.action.RW1C, unsigned(1))
         # bits [1:8) reserved
 
+        """
+    General-Purpose Timer:
+      - 32-bit up-counter
+      - 8-bit prescaler
+      - compare match + auto-reload
+      - level-high IRQ on match
+    """
 
     def __init__(self):
         # CSR bank: 5-bit address, 8-bit data bus
@@ -49,17 +58,12 @@ class GPTimer(Component):
         self._compare = regs.add("compare", self.Compare(), offset=0x0C)
         self._status  = regs.add("status",  self.Status(),  offset=0x10)
 
-        # CSR bridge
         self._bridge = csr.Bridge(regs.as_memory_map())
 
-        # Declare our external ports:
         super().__init__({
-            "bus": In (csr.Signature(addr_width=regs.addr_width,
-                                     data_width=regs.data_width)),
+            "bus": In (csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
             "irq": Out(1),
         })
-
-        # Hook up the bridge to our bus port:
         self.bus.memory_map = self._bridge.bus.memory_map
 
         # Internal timer signals:
@@ -71,6 +75,7 @@ class GPTimer(Component):
         m = Module()
         # hook up the CSR bridge
         m.submodules.bridge = self._bridge
+
         connect(m, flipped(self.bus), self._bridge.bus)
 
         # shorthands to the field-ports
@@ -84,7 +89,7 @@ class GPTimer(Component):
         cnt_r  = self._counter
         mflag  = self._match_flag
 
-        # -- prescaler & counter logic --
+        # prescaler & counter logic
         with m.If(ctrl.rst.data):
             m.d.sync += [
                 p_cnt.eq(0),
@@ -92,7 +97,7 @@ class GPTimer(Component):
                 mflag.eq(0),
             ]
         with m.Elif(ctrl.en.data):
-            with m.If(p_cnt == presc.val.data):
+            with m.If(p_cnt == presc.val.data):  
                 m.d.sync += [
                     p_cnt.eq(0),
                     cnt_r.eq(cnt_r + 1),
@@ -100,23 +105,27 @@ class GPTimer(Component):
             with m.Else():
                 m.d.sync += p_cnt.eq(p_cnt + 1)
 
-        # -- compare & auto-reload --
+        # compare & auto-reload, set match-flag
         with m.If((cnt_r == cmp_.val.data) & ctrl.en.data):
             m.d.sync += mflag.eq(1)
             with m.If(ctrl.ar.data):
                 m.d.sync += cnt_r.eq(0)
 
-        # -- IRQ output (level-high) --
-        m.d.comb += self.irq.eq(mflag & ctrl.irq_en.data)
+        # immediately clear our local pulse next cycle so it's one-hot
+        with m.If(mflag):
+            m.d.sync += mflag.eq(0)
 
-        # -- mirror into CSRs --
-        # COUNT read portc
+        # drive the RW1C “set” port from that pulse
+        m.d.comb += status.match.set.eq(mflag)
+
+        # mirror into COUNT CSR
         m.d.comb += cnt.val.r_data.eq(cnt_r)
-        # STATUS.MATCH read port
-        m.d.comb += status.match.data.eq(mflag)
+
+        # irq follows the *CSR storage
+        m.d.comb += self.irq.eq(status.match.data & ctrl.irq_en.data)
 
         # write-1-to-clear: if SW writes a ‘1’, clear the flag
-        with m.If(status.match.w_stb & status.match.w_data):
+        with m.If(status.match.set):
             m.d.sync += mflag.eq(0)
 
         return m
