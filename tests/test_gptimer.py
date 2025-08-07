@@ -22,22 +22,23 @@ class TestGPTimer(unittest.TestCase):
     REG_COMPARE = 0x0C
     REG_STATUS  = 0x10
 
-    async def _write_reg(self, ctx, bus, addr, value, width=1):
+    async def _write_reg(self, ctx, bus, addr, value, width=1): # width in bytes
         for i in range(width):
-            ctx.set(bus.addr, addr + i)
-            ctx.set(bus.w_data, (value >> (8 * i)) & 0xFF)
-            ctx.set(bus.w_stb, 1)
-            await ctx.tick()
-        ctx.set(bus.w_stb, 0)
-        await ctx.tick()
+            ctx.set(bus.addr, addr + i)                        #addr to write to
+            ctx.set(bus.w_data, (value >> (8 * i)) & 0xFF)   #exact byte value to write 
+            ctx.set(bus.w_stb, 1)                            #write strobe (write data on bus)
+            await ctx.tick()                                 #on the next clock edge
+
+        ctx.set(bus.w_stb, 0)                                #done, you can stop writing 
+        await ctx.tick()                                     #on the next edge
 
     async def _read_reg(self, ctx, bus, addr, width=1):
         result = 0
         for i in range(width):
-            ctx.set(bus.addr, addr + i)
-            ctx.set(bus.r_stb, 1)
-            await ctx.tick()
-            result |= ctx.get(bus.r_data) << (8 * i)
+            ctx.set(bus.addr, addr + i)                      #set the bus to this address
+            ctx.set(bus.r_stb, 1)                            #read from bus                         
+            await ctx.tick()                                 #on the next clock edge
+            result |= ctx.get(bus.r_data) << (8 * i)         #use bitwise or to assemble read           
         ctx.set(bus.r_stb, 0)
         await ctx.tick()
         return result
@@ -49,8 +50,8 @@ class TestGPTimer(unittest.TestCase):
         async def testbench(ctx):
             bus = dut.timer.bus
 
-            # prescaler = 2 → increment every 3 cycles, enable timer
-            await self._write_reg(ctx, bus, self.REG_PRESC, 2, 1)
+            # prescaler = 2 → increment every 3 cycles & enable timer
+            await self._write_reg(ctx, bus, self.REG_PRESC, 2, 1)      
             await self._write_reg(ctx, bus, self.REG_CTRL, 1 << 0, 1)
 
             # run 10 cycles → floor(10/3) = 3
@@ -58,13 +59,13 @@ class TestGPTimer(unittest.TestCase):
                 await ctx.tick()
 
             cnt = await self._read_reg(ctx, bus, self.REG_COUNT, width=4)
-            self.assertEqual(cnt, 3)
+            self.assertEqual(cnt, 3)                          #generater error message if this test fails
 
         sim = Simulator(dut)
-        sim.add_clock(1e-6)
+        sim.add_clock(1e-6)                                    #generate clock signal for ctx
         sim.add_testbench(testbench)
         with sim.write_vcd("gptimer_presc_test.vcd", "gptimer_presc_test.gtkw"):
-            sim.run()
+            sim.run()                                           #run simulation
 
     def test_match_and_irq_and_auto_reload(self):
         """COMPARE match should set STATUS.MATCH, assert IRQ, then auto-reload."""
@@ -73,30 +74,30 @@ class TestGPTimer(unittest.TestCase):
         async def testbench(ctx):
             bus = dut.timer.bus
 
-            # fastest tick, compare = 5, enable + auto-reload + irq enable
+            #setup: prescaler 0, compare = 5, enable + auto-reload + irq enable
             await self._write_reg(ctx, bus, self.REG_PRESC,   0,    1)
             await self._write_reg(ctx, bus, self.REG_COMPARE, 5,    4)
-            ctrl_bits = (1 << 0) | (1 << 2) | (1 << 3)
+            ctrl_bits = (1 << 0) | (1 << 2) | (1 << 3)         
             await self._write_reg(ctx, bus, self.REG_CTRL, ctrl_bits, 1)
 
             # step up to compare
             for _ in range(5):
                 await ctx.tick()
+
             # on next tick, match → STATUS.MATCH=1 and irq=1
             await ctx.tick()
-            status = await self._read_reg(ctx, bus, self.REG_STATUS, 1)
-            self.assertEqual(status & 0x1, 1)
-            self.assertEqual(ctx.get(dut.timer.irq), 1)
 
-            # next tick, counter should reload to 0 then increment → 1
-            await ctx.tick()
             cnt = await self._read_reg(ctx, bus, self.REG_COUNT, 4)
-            self.assertEqual(cnt, 1)
+            self.assertEqual(cnt, 0)
+ 
+            status = await self._read_reg(ctx, bus, self.REG_STATUS, 1)
+            self.assertEqual(status , 1)
+            self.assertEqual(ctx.get(dut.timer.irq), 1)
 
             # clear the match bit
             await self._write_reg(ctx, bus, self.REG_STATUS, 1, 1)
             status2 = await self._read_reg(ctx, bus, self.REG_STATUS, 1)
-            self.assertEqual(status2 & 0x1, 0)
+            self.assertEqual(status2 , 0)
 
         sim = Simulator(dut)
         sim.add_clock(1e-6)

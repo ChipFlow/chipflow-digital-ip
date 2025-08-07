@@ -69,7 +69,7 @@ class GPTimer(Component):
         # Internal timer signals:
         self._prescaler_cnt = Signal(8)
         self._counter       = Signal(32)
-        self._match_flag    = Signal()
+        self._match_flag    = Signal(1)
 
     def elaborate(self, platform):
         m = Module()
@@ -111,10 +111,6 @@ class GPTimer(Component):
             with m.If(ctrl.ar.data):
                 m.d.sync += cnt_r.eq(0)
 
-        # immediately clear our local pulse next cycle so it's one-hot
-        with m.If(mflag):
-            m.d.sync += mflag.eq(0)
-
         # drive the RW1C “set” port from that pulse
         m.d.comb += status.match.set.eq(mflag)
 
@@ -124,9 +120,11 @@ class GPTimer(Component):
         # irq follows the *CSR storage
         m.d.comb += self.irq.eq(status.match.data & ctrl.irq_en.data)
 
-        # write-1-to-clear: if SW writes a ‘1’, clear the flag
-        with m.If(status.match.set):
+         # immediately clear our local pulse next cycle so it's one-hot
+        with m.If(mflag):
             m.d.sync += mflag.eq(0)
+
+
 
         return m
 
