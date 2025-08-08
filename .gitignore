@@ -12,4 +12,8 @@ __pycache__/
 
 *.vcd
 *.gtkw
-*.env
+
+#env files
+.env
+.env.*
+**/.env
