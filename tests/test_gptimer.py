@@ -91,13 +91,14 @@ class TestGPTimer(unittest.TestCase):
             self.assertEqual(cnt, 0)
  
             status = await self._read_reg(ctx, bus, self.REG_STATUS, 1)
+
             self.assertEqual(status , 1)
             self.assertEqual(ctx.get(dut.timer.irq), 1)
 
             # clear the match bit
             await self._write_reg(ctx, bus, self.REG_STATUS, 1, 1)
-            status2 = await self._read_reg(ctx, bus, self.REG_STATUS, 1)
-            self.assertEqual(status2 , 0)
+            status = await self._read_reg(ctx, bus, self.REG_STATUS, 1)
+            self.assertEqual(status , 0)
 
         sim = Simulator(dut)
         sim.add_clock(1e-6)
