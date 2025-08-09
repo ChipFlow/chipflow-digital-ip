@@ -19,6 +19,7 @@ dependencies = [
     "chipflow-lib @ git+https://github.com/ChipFlow/chipflow-lib.git",
     "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio",
+    "minerva @ git+https://github.com/minerva-cpu/minerva",
 ]
 
 # Build system configuration
