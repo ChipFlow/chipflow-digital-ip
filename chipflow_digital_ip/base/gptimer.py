@@ -96,7 +96,7 @@ class GPTimer(Component):
         # compare & auto-reload, set match-flag
         with m.If((cnt_r == cmp_.val.data) & ctrl.en.data):
             m.d.sync += mflag.eq(1)
-            with m.If(ctrl.ar.data):
+            with m.If(ctrl.ar.data):              # if  auto reload isn't enabled the counter keeps incrementing after hitting the compare match value
                 m.d.sync += cnt_r.eq(0)
 
         m.d.comb += status.match.set.eq(mflag)                        # drive the RW1C “set” port from that pulse
