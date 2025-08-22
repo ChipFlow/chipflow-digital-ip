@@ -1,5 +1,4 @@
 from amaranth import Module, Signal, unsigned
-from amaranth.lib import wiring
 from amaranth.lib.wiring import Component, In, Out , connect, flipped
 
 from amaranth_soc import csr
