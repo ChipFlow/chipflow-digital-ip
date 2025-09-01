@@ -7,30 +7,39 @@ from amaranth_soc import csr
 
 __all__ = ["PlatformTimer"]
 
+# Some deep weirness going on, putting docstrings in the normal location
+# doesn't work with subclasses of csr.Register. I have no idea why!!!
+#
+class CNT(csr.Register, access="r"):
+    """
+    Cycle counter (read-only).
+    """
+    def __init__(self, width):
+        super().__init__({"val": csr.Field(csr.action.R, unsigned(width))})
+
+
+class CMP(csr.Register, access="rw"):
+    """
+    Comparator (read/write).
+
+    If set to a non-zero value, an interrupt is triggered when CNT is greater than or equal
+    to CMP.
+    """
+    def __init__(self, width):
+        super().__init__({"val": csr.Field(csr.action.RW, unsigned(width))})
+
 
 class PlatformTimer(wiring.Component):
-    class CNT(csr.Register, access="r"):
-        """Cycle counter (read-only)."""
-        def __init__(self, width):
-            super().__init__({"val": csr.Field(csr.action.R, unsigned(width))})
-
-    class CMP(csr.Register, access="rw"):
-        """Comparator (read/write).
-
-        If set to a non-zero value, an interrupt is triggered when CNT is greater than or equal
-        to CMP.
-        """
-        def __init__(self, width):
-            super().__init__({"val": csr.Field(csr.action.RW, unsigned(width))})
-
-    """Platform timer peripheral."""
+    """
+    Simple timer that counts clock cycles and raises an interrupt when the count hits a configured threshold
+    """
     def __init__(self):
         self.width = 48
 
         regs = csr.Builder(addr_width=4, data_width=8)
 
-        self._cnt = regs.add("cnt", self.CNT(self.width), offset=0x0)
-        self._cmp = regs.add("cmp", self.CMP(self.width), offset=0x8)
+        self._cnt = regs.add("cnt", CNT(self.width), offset=0x0)
+        self._cmp = regs.add("cmp", CMP(self.width), offset=0x8)
 
         self._bridge = csr.Bridge(regs.as_memory_map())
 

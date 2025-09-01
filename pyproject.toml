@@ -8,14 +8,18 @@ authors = [
     {name = "Myrtle Shah", email = "gatecat@ds0.me" },
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {file = "LICENSE.txt"}
+license-files = [
+    "LICENSE*",
+    "vendor/*/*/LICEN?E*",
+]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "amaranth>=0.5,<0.6",
-    "chipflow-lib @ git+https://github.com/ChipFlow/chipflow-lib.git",
-    "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
+    "amaranth>=0.5,<0.7",
+    "chipflow-lib @ git+https://github.com/ChipFlow/chipflow-lib",
+    "amaranth-soc @ git+https://github.com/ChipFlow/amaranth-soc",
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio",
+    "minerva @ git+https://github.com/minerva-cpu/minerva",
 ]
 
 # Build system configuration
@@ -23,6 +27,9 @@ dependencies = [
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
+
+[tool.pdm.build]
+includes = ["**/*.py", "**/*.v", "**/*.yaml"]
 
 # Development workflow configuration
 
@@ -34,7 +41,9 @@ reportMissingImports = false
 reportUnboundVariable = false
 
 [tool.ruff.lint]
+select = ['E4', 'E7', 'E9', 'F', 'W291', 'W293']
 ignore = ['F403', 'F405', 'F841']
+exclude = ["vendor/**"]
 
 [tool.pdm.version]
 source = "scm"
@@ -45,14 +54,15 @@ test-cov.cmd = "pytest --cov=chipflow-digital-ip cov-report=term"
 test-cov-html.cmd = "pytest --cov=chipflow-digital-ip --cov-report=html"
 # test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
 test-docs.cmd = "true"
-lint.cmd = "ruff check"
+lint.composite = ["./tools/license_check.sh", "ruff check"]
 #docs.cmd = "sphinx-build docs/ docs/_build/ -W --keep-going"
 doc.cmd = "true"
-
+export-ips.cmd = "./tools/export_ips.py"
 
 [dependency-groups]
 dev = [
     "ruff>=0.9.2",
     "pytest>=7.2.0",
     "pytest-cov>=0.6",
+    "docstring-parser>=0.16",
 ]

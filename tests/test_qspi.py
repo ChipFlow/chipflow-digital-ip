@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import unittest
+
 from amaranth import *
 from amaranth.lib import enum, data, wiring, stream
 from amaranth.lib.wiring import In, Out, connect
 from amaranth.sim import *
 
-from chipflow_digital_ip.memory.glasgow_qspi import QSPIMode
-from chipflow_digital_ip.memory.qspi_flash import WishboneQSPIFlashController
+from chipflow_digital_ip.memory._qspi_flash import WishboneQSPIFlashController, QSPIMode
+
 
 class _QSPIFlashCommand(enum.Enum, shape=8):
     Read                = 0x03
@@ -142,7 +143,7 @@ async def _wb_read(self, ctx, dut, addr, r_data):
     ctx.set(dut.wb_bus.stb, 1)
     await ctx.tick()
     while ctx.get(dut.wb_bus.ack) == 0:
-        await ctx.tick()        
+        await ctx.tick()
     ctx.set(dut.wb_bus.cyc, 0)
     ctx.set(dut.wb_bus.stb, 0)
     self.assertEqual(ctx.get(dut.wb_bus.dat_r), r_data)

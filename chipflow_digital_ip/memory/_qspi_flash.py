@@ -6,12 +6,11 @@ from amaranth.utils import exact_log2
 from amaranth_soc import wishbone, csr
 from amaranth_soc.memory import MemoryMap
 
-from chipflow_digital_ip.io.glasgow_iostream import PortGroup
-from chipflow_digital_ip.memory.glasgow_qspi import QSPIMode, QSPIController
+from ..io._glasgow_iostream import PortGroup
+from ..memory._glasgow_qspi import QSPIMode, QSPIController
 
 from chipflow_lib.platforms import BidirIOSignature, OutputIOSignature
 
-__all__ = ["QSPIFlash"]
 
 class QSPIFlashCommand(enum.Enum, shape=8):
     Read                = 0x03
@@ -254,10 +253,10 @@ class QSPIFlash(wiring.Component):
             super().__init__({
                 "clk": Out(OutputIOSignature(1)),
                 "csn": Out(OutputIOSignature(1)),
-                "d": Out(BidirIOSignature(4, all_have_oe=True)),
+                "d": Out(BidirIOSignature(4, individual_oe=True)),
             })
 
-    def __init__(self, *, addr_width, data_width):
+    def __init__(self, *, addr_width=24, data_width=32):
         super().__init__({
             "pins": Out(self.Signature()),
             "csr_bus": In(csr.Signature(addr_width=4, data_width=8)),

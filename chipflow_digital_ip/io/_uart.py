@@ -7,7 +7,7 @@ from amaranth_stdio.serial import AsyncSerialRX, AsyncSerialTX
 
 from chipflow_lib.platforms import OutputIOSignature, InputIOSignature
 
-from . import rfc_uart
+from . import _rfc_uart
 
 __all__ = ["UARTPeripheral"]
 
@@ -45,7 +45,7 @@ class UARTPhyRx(wiring.Component):
                 ]
 
         with m.If(self.symbols.ready):
-            m.d.sync += self.symbols.valid.eq(0)     
+            m.d.sync += self.symbols.valid.eq(0)
 
         m.d.comb += [
             lower.i.eq(self._port.i),
@@ -150,7 +150,7 @@ class UARTPeripheral(wiring.Component):
 
     def __init__(self, *, addr_width=5, data_width=8, init_divisor=0):
         phy_config_shape = data.StructLayout({"divisor": unsigned(24)})
-        self._uart = rfc_uart.Peripheral(
+        self._uart = _rfc_uart.Peripheral(
             addr_width=addr_width,
             data_width=data_width,
             phy_config_shape=phy_config_shape,

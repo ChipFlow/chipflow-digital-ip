@@ -1,0 +1,7 @@
+[submodule "vendor/openhwgroup/cv32e40p"]
+	path = vendor/openhwgroup/cv32e40p
+	url = https://github.com/openhwgroup/cv32e40p
+[submodule "vendor/gatecat/riscv-dbg"]
+	path = vendor/gatecat/riscv-dbg
+	url = https://github.com/gatecat/riscv-dbg
+	branch = singleclock

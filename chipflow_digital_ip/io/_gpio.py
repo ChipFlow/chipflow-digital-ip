@@ -1,29 +1,17 @@
+from typing import Unpack
+
 from amaranth import Module, unsigned
 from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, flipped, connect
 
 from amaranth_soc import csr, gpio
 
-from chipflow_lib.platforms import BidirIOSignature
+from chipflow_lib.platforms import BidirIOSignature, IOModelOptions
 
 __all__ = ["GPIOPeripheral"]
 
 
 class GPIOPeripheral(wiring.Component):
-
-    class Signature(wiring.Signature):
-        def __init__(self, pin_count=1):
-            if pin_count > 32:
-                raise ValueError(f"Pin pin_count must be lesser than or equal to 32, not {pin_count}")
-            self._pin_count = pin_count
-            super().__init__({
-                "gpio": Out(BidirIOSignature(pin_count, all_have_oe=True))
-                })
-
-        @property
-        def pin_count(self):
-            return self._pin_count
-
     """Wrapper for amaranth_soc gpio with chipflow_lib.IOSignature support
 
     Parameters
@@ -55,7 +43,23 @@ class GPIOPeripheral(wiring.Component):
         If ``input_stages`` is not a non-negative integer.
     """
 
-    def __init__(self, *, pin_count, addr_width=4, data_width=8, input_stages=2):
+    class Signature(wiring.Signature):
+        """
+        Signature of the gpio port wiring
+        """
+        def __init__(self, pin_count=1):
+            if pin_count > 32:
+                raise ValueError(f"Pin pin_count must be lesser than or equal to 32, not {pin_count}")
+            self._pin_count = pin_count
+            super().__init__({
+                "gpio": Out(BidirIOSignature(pin_count, all_have_oe=True))
+                })
+
+        @property
+        def pin_count(self):
+            return self._pin_count
+
+    def __init__(self, *, pin_count=8, addr_width=4, data_width=8, input_stages=2):
         self._gpio = gpio.Peripheral(pin_count=pin_count,
                                      addr_width=addr_width,
                                      data_width=data_width,

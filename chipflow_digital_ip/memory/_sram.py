@@ -53,7 +53,7 @@ class SRAMPeripheral(wiring.Component):
         Wishbone bus interface.
     """
     # TODO raise bus.err if read-only and a bus write is attempted.
-    def __init__(self, *, size, data_width=32, granularity=8, writable=True):
+    def __init__(self, *, size=1024, data_width=32, granularity=8, writable=True):
         if not isinstance(size, int) or size <= 0 or size & size-1:
             raise ValueError("Size must be an integer power of two, not {!r}"
                              .format(size))
