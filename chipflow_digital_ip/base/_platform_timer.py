@@ -11,6 +11,7 @@ __all__ = ["PlatformTimer"]
 class PlatformTimer(wiring.Component):
     class CNT(csr.Register, access="r"):
         """Cycle counter (read-only)."""
+
         def __init__(self, width):
             super().__init__({"val": csr.Field(csr.action.R, unsigned(width))})
 
@@ -20,10 +21,12 @@ class PlatformTimer(wiring.Component):
         If set to a non-zero value, an interrupt is triggered when CNT is greater than or equal
         to CMP.
         """
+
         def __init__(self, width):
             super().__init__({"val": csr.Field(csr.action.RW, unsigned(width))})
 
     """Platform timer peripheral."""
+
     def __init__(self):
         self.width = 48
 
@@ -34,10 +37,16 @@ class PlatformTimer(wiring.Component):
 
         self._bridge = csr.Bridge(regs.as_memory_map())
 
-        super().__init__({
-            "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
-            "irq": Out(unsigned(1)),
-        })
+        super().__init__(
+            {
+                "bus": In(
+                    csr.Signature(
+                        addr_width=regs.addr_width, data_width=regs.data_width
+                    )
+                ),
+                "irq": Out(unsigned(1)),
+            }
+        )
         self.bus.memory_map = self._bridge.bus.memory_map
 
     def elaborate(self, platform):
@@ -48,8 +57,10 @@ class PlatformTimer(wiring.Component):
 
         m.d.sync += [
             self._cnt.f.val.r_data.eq(self._cnt.f.val.r_data + 1),
-            self.irq.eq((self._cmp.f.val.data != 0) &
-                        (self._cmp.f.val.data <= self._cnt.f.val.r_data)),
+            self.irq.eq(
+                (self._cmp.f.val.data != 0)
+                & (self._cmp.f.val.data <= self._cnt.f.val.r_data)
+            ),
         ]
 
         return m

@@ -7,29 +7,33 @@ from chipflow_lib.platforms import InputIOSignature, OutputIOSignature
 
 __all__ = ["SPISignature", "SPIPeripheral"]
 
-SPISignature = wiring.Signature({
-    "sck": Out(OutputIOSignature(1)),
-    "copi": Out(OutputIOSignature(1)),
-    "cipo": Out(InputIOSignature(1)),
-    "csn": Out(OutputIOSignature(1)),
-})
+SPISignature = wiring.Signature(
+    {
+        "sck": Out(OutputIOSignature(1)),
+        "copi": Out(OutputIOSignature(1)),
+        "cipo": Out(InputIOSignature(1)),
+        "csn": Out(OutputIOSignature(1)),
+    }
+)
 
 
 class SPIController(wiring.Component):
     def __init__(self):
-        super().__init__({
-            "spi": Out(SPISignature),
-            "sck_idle": In(1),
-            "sck_edge": In(1),
-            "cs": In(1),
-            "start_xfer": In(1),
-            "width": In(5),
-            "divider": In(8),
-            "d_send": In(32),
-            "d_recv": Out(32),
-            "busy": Out(1),
-            "done": Out(1),
-        })
+        super().__init__(
+            {
+                "spi": Out(SPISignature),
+                "sck_idle": In(1),
+                "sck_edge": In(1),
+                "cs": In(1),
+                "start_xfer": In(1),
+                "width": In(5),
+                "divider": In(8),
+                "d_send": In(32),
+                "d_recv": Out(32),
+                "busy": Out(1),
+                "done": Out(1),
+            }
+        )
 
     def elaborate(self, platform):
         m = Module()
@@ -103,10 +107,7 @@ class SPIController(wiring.Component):
         with m.If(latch):
             m.d.sync += sr_i.eq(Cat(self.spi.cipo.i, sr_i))
 
-        m.d.comb += [
-            self.d_recv.eq(sr_i),
-            self.spi.copi.o.eq(sr_o[-1])
-        ]
+        m.d.comb += [self.d_recv.eq(sr_i), self.spi.copi.o.eq(sr_o[-1])]
 
         return m
 
@@ -121,6 +122,7 @@ class SPIPeripheral(wiring.Component):
         chip_select: write '1' to assert (bring low) chip select output
         width: width of transfer, minus 1
         """
+
         sck_idle: csr.Field(csr.action.RW, unsigned(1))
         sck_edge: csr.Field(csr.action.RW, unsigned(1))
         chip_select: csr.Field(csr.action.RW, unsigned(1))
@@ -128,18 +130,22 @@ class SPIPeripheral(wiring.Component):
 
     class Divider(csr.Register, access="rw"):
         """SPI SCK clock divider, 1 = divide by 4"""
+
         val: csr.Field(csr.action.RW, unsigned(8))
 
     class SendData(csr.Register, access="w"):
         """data to transmit, must be left justified (bits [31..32-N] used)"""
+
         val: csr.Field(csr.action.W, unsigned(32))
 
     class ReceiveData(csr.Register, access="r"):
         """data received, is right justified (bits [N-1..0] used)"""
+
         val: csr.Field(csr.action.R, unsigned(32))
 
     class Status(csr.Register, access="r"):
         """recv_full is 1 when transfer has been completed. reset to zero by reading receive_data"""
+
         recv_full: csr.Field(csr.action.R, unsigned(1))
 
     """
@@ -149,18 +155,24 @@ class SPIPeripheral(wiring.Component):
     def __init__(self):
         regs = csr.Builder(addr_width=5, data_width=8)
 
-        self._config       = regs.add("config",       self.Config(),      offset=0x00)
-        self._divider      = regs.add("divider",      self.Divider(),     offset=0x04)
-        self._send_data    = regs.add("send_data",    self.SendData(),    offset=0x08)
+        self._config = regs.add("config", self.Config(), offset=0x00)
+        self._divider = regs.add("divider", self.Divider(), offset=0x04)
+        self._send_data = regs.add("send_data", self.SendData(), offset=0x08)
         self._receive_data = regs.add("receive_data", self.ReceiveData(), offset=0x0C)
-        self._status       = regs.add("status",       self.Status(),      offset=0x10)
+        self._status = regs.add("status", self.Status(), offset=0x10)
 
         self._bridge = csr.Bridge(regs.as_memory_map())
 
-        super().__init__({
-            "spi_pins": Out(SPISignature),
-            "bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
-        })
+        super().__init__(
+            {
+                "spi_pins": Out(SPISignature),
+                "bus": In(
+                    csr.Signature(
+                        addr_width=regs.addr_width, data_width=regs.data_width
+                    )
+                ),
+            }
+        )
         self.bus.memory_map = self._bridge.bus.memory_map
 
     def elaborate(self, platform):

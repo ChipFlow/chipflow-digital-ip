@@ -9,7 +9,13 @@ from amaranth.lib.wiring import In, Out, flipped, connect
 from amaranth_soc import csr
 
 
-__all__ = ["RxPhySignature", "TxPhySignature", "RxPeripheral", "TxPeripheral", "Peripheral"]
+__all__ = [
+    "RxPhySignature",
+    "TxPhySignature",
+    "RxPeripheral",
+    "TxPeripheral",
+    "Peripheral",
+]
 
 
 class RxPhySignature(wiring.Signature):
@@ -38,14 +44,17 @@ class RxPhySignature(wiring.Signature):
         Receiver error flag. Pulsed for one clock cycle in case of an implementation-specific error
         (e.g. wrong parity bit).
     """
+
     def __init__(self, phy_config_shape, symbol_shape):
-        super().__init__({
-            "rst":      Out(1),
-            "config":   Out(phy_config_shape),
-            "symbols":  In(stream.Signature(symbol_shape)),
-            "overflow": In(1),
-            "error":    In(1),
-        })
+        super().__init__(
+            {
+                "rst": Out(1),
+                "config": Out(phy_config_shape),
+                "symbols": In(stream.Signature(symbol_shape)),
+                "overflow": In(1),
+                "error": In(1),
+            }
+        )
 
 
 class TxPhySignature(wiring.Signature):
@@ -68,20 +77,27 @@ class TxPhySignature(wiring.Signature):
     symbols : :py:`Out(stream.Signature(symbol_shape))`
         Symbol stream. The shape of its payload is given by the `symbol_shape` parameter.
     """
+
     def __init__(self, phy_config_shape, symbol_shape):
-        super().__init__({
-            "rst":     Out(1),
-            "config":  Out(phy_config_shape),
-            "symbols": Out(stream.Signature(symbol_shape)),
-        })
+        super().__init__(
+            {
+                "rst": Out(1),
+                "config": Out(phy_config_shape),
+                "symbols": Out(stream.Signature(symbol_shape)),
+            }
+        )
 
 
 class _PhyConfigFieldAction(csr.FieldAction):
     def __init__(self, shape, *, init=0):
-        super().__init__(shape, access="rw", members=(
-            ("data", Out(shape)),
-            ("w_en", In(unsigned(1))),
-        ))
+        super().__init__(
+            shape,
+            access="rw",
+            members=(
+                ("data", Out(shape)),
+                ("w_en", In(unsigned(1))),
+            ),
+        )
         self._storage = Signal(shape, init=init)
 
     def elaborate(self, platform):
@@ -115,7 +131,8 @@ class RxPeripheral(wiring.Component):
         - If the ``enable`` field is 0, the PHY is held in reset state.
         - If the ``enable`` field is 1, the PHY operates normally.
         """
-        enable: csr.Field(csr.action.RW,      1)
+
+        enable: csr.Field(csr.action.RW, 1)
         _unimp: csr.Field(csr.action.ResR0W0, 7)
 
     class PhyConfig(csr.Register, access="rw"):
@@ -141,9 +158,11 @@ class RxPeripheral(wiring.Component):
         phy_config_init : :class:`int`
             Initial value of the PHY configuration word.
         """
+
         def __init__(self, phy_config_shape, phy_config_init):
-            super().__init__(csr.Field(_PhyConfigFieldAction, phy_config_shape,
-                                       init=phy_config_init))
+            super().__init__(
+                csr.Field(_PhyConfigFieldAction, phy_config_shape, init=phy_config_init)
+            )
 
     class Status(csr.Register, access="rw"):
         """Status register.
@@ -167,10 +186,11 @@ class RxPeripheral(wiring.Component):
           buffer is full.
         - The ``error`` field is set and latched if any implementation-specific error occured.
         """
-        ready:    csr.Field(csr.action.R,       1)
-        overflow: csr.Field(csr.action.RW1C,    1)
-        error:    csr.Field(csr.action.RW1C,    1)
-        _unimp:   csr.Field(csr.action.ResR0W0, 5)
+
+        ready: csr.Field(csr.action.R, 1)
+        overflow: csr.Field(csr.action.RW1C, 1)
+        error: csr.Field(csr.action.RW1C, 1)
+        _unimp: csr.Field(csr.action.ResR0W0, 5)
 
     class Data(csr.Register, access="r"):
         """Data register.
@@ -199,6 +219,7 @@ class RxPeripheral(wiring.Component):
         symbol_shape : :ref:`shape-like <lang-shapelike>`
             Shape of a symbol.
         """
+
         def __init__(self, symbol_shape):
             super().__init__(csr.Field(csr.action.R, symbol_shape))
 
@@ -224,26 +245,38 @@ class RxPeripheral(wiring.Component):
     phy : :py:`Out(RxPhySignature(phy_config_shape, symbol_shape))`
         Interface between the peripheral and its PHY.
     """
-    def __init__(self, *, addr_width, data_width, phy_config_shape=unsigned(16),
-                 phy_config_init=0, symbol_shape=unsigned(8)):
+
+    def __init__(
+        self,
+        *,
+        addr_width,
+        data_width,
+        phy_config_shape=unsigned(16),
+        phy_config_init=0,
+        symbol_shape=unsigned(8),
+    ):
         regs = csr.Builder(addr_width=addr_width, data_width=data_width)
 
-        self._config     = regs.add("Config",    self.Config())
-        self._phy_config = regs.add("PhyConfig", self.PhyConfig(phy_config_shape, phy_config_init))
-        self._status     = regs.add("Status",    self.Status())
-        self._data       = regs.add("Data",      self.Data(symbol_shape))
+        self._config = regs.add("Config", self.Config())
+        self._phy_config = regs.add(
+            "PhyConfig", self.PhyConfig(phy_config_shape, phy_config_init)
+        )
+        self._status = regs.add("Status", self.Status())
+        self._data = regs.add("Data", self.Data(symbol_shape))
 
         self._bridge = csr.Bridge(regs.as_memory_map())
 
-        super().__init__({
-            "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
-            "phy": Out(RxPhySignature(phy_config_shape, symbol_shape)),
-        })
+        super().__init__(
+            {
+                "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
+                "phy": Out(RxPhySignature(phy_config_shape, symbol_shape)),
+            }
+        )
         self.bus.memory_map = self._bridge.bus.memory_map
 
         self._phy_config_shape = phy_config_shape
-        self._phy_config_init  = phy_config_init
-        self._symbol_shape     = symbol_shape
+        self._phy_config_init = phy_config_init
+        self._symbol_shape = symbol_shape
 
     @property
     def phy_config_shape(self):
@@ -283,14 +316,11 @@ class RxPeripheral(wiring.Component):
 
         m.d.comb += [
             self.phy.rst.eq(~self._config.f.enable.data),
-
             self._phy_config.f.w_en.eq(self.phy.rst),
             self.phy.config.eq(self._phy_config.f.data),
-
             self._status.f.ready.r_data.eq(self.phy.symbols.valid),
             self._data.f.r_data.eq(self.phy.symbols.payload),
             self.phy.symbols.ready.eq(self._data.f.r_stb),
-
             self._status.f.overflow.set.eq(self.phy.overflow),
             self._status.f.error.set.eq(self.phy.error),
         ]
@@ -315,7 +345,8 @@ class TxPeripheral(wiring.Component):
         - If the ``enable`` bit is 0, the PHY is held in reset state.
         - If the ``enable`` bit is 1, the PHY operates normally.
         """
-        enable: csr.Field(csr.action.RW,      1)
+
+        enable: csr.Field(csr.action.RW, 1)
         _unimp: csr.Field(csr.action.ResR0W0, 7)
 
     class PhyConfig(csr.Register, access="rw"):
@@ -341,9 +372,11 @@ class TxPeripheral(wiring.Component):
         phy_config_init : :class:`int`
             Initial value of the PHY configuration word.
         """
+
         def __init__(self, phy_config_shape, phy_config_init):
-            super().__init__(csr.Field(_PhyConfigFieldAction, phy_config_shape,
-                                       init=phy_config_init))
+            super().__init__(
+                csr.Field(_PhyConfigFieldAction, phy_config_shape, init=phy_config_init)
+            )
 
     class Status(csr.Register, access="r"):
         """Status register.
@@ -362,7 +395,8 @@ class TxPeripheral(wiring.Component):
 
         - The ``ready`` field is set if the transmitter buffer is non-full.
         """
-        ready:  csr.Field(csr.action.R,       1)
+
+        ready: csr.Field(csr.action.R, 1)
         _unimp: csr.Field(csr.action.ResR0W0, 7)
 
     class Data(csr.Register, access="w"):
@@ -391,6 +425,7 @@ class TxPeripheral(wiring.Component):
         symbol_shape : :ref:`shape-like <lang-shapelike>`
             Shape of a symbol.
         """
+
         def __init__(self, symbol_shape):
             super().__init__(csr.Field(csr.action.W, symbol_shape))
 
@@ -416,26 +451,38 @@ class TxPeripheral(wiring.Component):
     phy : :py:`Out(TxPhySignature(phy_config_shape, symbol_shape))`
         Interface between the peripheral and its PHY.
     """
-    def __init__(self, *, addr_width, data_width=8, phy_config_shape=unsigned(16),
-                 phy_config_init=0, symbol_shape=unsigned(8)):
+
+    def __init__(
+        self,
+        *,
+        addr_width,
+        data_width=8,
+        phy_config_shape=unsigned(16),
+        phy_config_init=0,
+        symbol_shape=unsigned(8),
+    ):
         regs = csr.Builder(addr_width=addr_width, data_width=data_width)
 
-        self._config     = regs.add("Config",    self.Config())
-        self._phy_config = regs.add("PhyConfig", self.PhyConfig(phy_config_shape, phy_config_init))
-        self._status     = regs.add("Status",    self.Status())
-        self._data       = regs.add("Data",      self.Data(symbol_shape))
+        self._config = regs.add("Config", self.Config())
+        self._phy_config = regs.add(
+            "PhyConfig", self.PhyConfig(phy_config_shape, phy_config_init)
+        )
+        self._status = regs.add("Status", self.Status())
+        self._data = regs.add("Data", self.Data(symbol_shape))
 
         self._bridge = csr.Bridge(regs.as_memory_map())
 
-        super().__init__({
-            "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
-            "phy": Out(TxPhySignature(phy_config_shape, symbol_shape)),
-        })
+        super().__init__(
+            {
+                "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
+                "phy": Out(TxPhySignature(phy_config_shape, symbol_shape)),
+            }
+        )
         self.bus.memory_map = self._bridge.bus.memory_map
 
         self._phy_config_shape = phy_config_shape
-        self._phy_config_init  = phy_config_init
-        self._symbol_shape     = symbol_shape
+        self._phy_config_init = phy_config_init
+        self._symbol_shape = symbol_shape
 
     @property
     def phy_config_shape(self):
@@ -475,10 +522,8 @@ class TxPeripheral(wiring.Component):
 
         m.d.comb += [
             self.phy.rst.eq(~self._config.f.enable.data),
-
             self._phy_config.f.w_en.eq(self.phy.rst),
             self.phy.config.eq(self._phy_config.f.data),
-
             self._status.f.ready.r_data.eq(self.phy.symbols.ready),
             self.phy.symbols.payload.eq(self._data.f.w_data),
             self.phy.symbols.valid.eq(self._data.f.w_stb),
@@ -522,32 +567,52 @@ class Peripheral(wiring.Component):
     :exc:`TypeError`
         If ``addr_width`` is not a positive integer.
     """
-    def __init__(self, *, addr_width, data_width=8, phy_config_shape=unsigned(16),
-                 phy_config_init=0, symbol_shape=unsigned(8)):
-        if not isinstance(addr_width, int) or addr_width <= 0:
-            raise TypeError(f"Address width must be a positive integer, not {addr_width!r}")
 
-        self._rx = RxPeripheral(addr_width=addr_width - 1, data_width=data_width,
-                                phy_config_shape=phy_config_shape, phy_config_init=phy_config_init,
-                                symbol_shape=symbol_shape)
-        self._tx = TxPeripheral(addr_width=addr_width - 1, data_width=data_width,
-                                phy_config_shape=phy_config_shape, phy_config_init=phy_config_init,
-                                symbol_shape=symbol_shape)
+    def __init__(
+        self,
+        *,
+        addr_width,
+        data_width=8,
+        phy_config_shape=unsigned(16),
+        phy_config_init=0,
+        symbol_shape=unsigned(8),
+    ):
+        if not isinstance(addr_width, int) or addr_width <= 0:
+            raise TypeError(
+                f"Address width must be a positive integer, not {addr_width!r}"
+            )
+
+        self._rx = RxPeripheral(
+            addr_width=addr_width - 1,
+            data_width=data_width,
+            phy_config_shape=phy_config_shape,
+            phy_config_init=phy_config_init,
+            symbol_shape=symbol_shape,
+        )
+        self._tx = TxPeripheral(
+            addr_width=addr_width - 1,
+            data_width=data_width,
+            phy_config_shape=phy_config_shape,
+            phy_config_init=phy_config_init,
+            symbol_shape=symbol_shape,
+        )
 
         self._decoder = csr.Decoder(addr_width=addr_width, data_width=data_width)
         self._decoder.add(self._rx.bus, name="rx")
         self._decoder.add(self._tx.bus, name="tx")
 
-        super().__init__({
-            "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
-            "rx":  Out(RxPhySignature(phy_config_shape, symbol_shape)),
-            "tx":  Out(TxPhySignature(phy_config_shape, symbol_shape)),
-        })
+        super().__init__(
+            {
+                "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
+                "rx": Out(RxPhySignature(phy_config_shape, symbol_shape)),
+                "tx": Out(TxPhySignature(phy_config_shape, symbol_shape)),
+            }
+        )
         self.bus.memory_map = self._decoder.bus.memory_map
 
         self._phy_config_shape = phy_config_shape
-        self._phy_config_init  = phy_config_init
-        self._symbol_shape     = symbol_shape
+        self._phy_config_init = phy_config_init
+        self._symbol_shape = symbol_shape
 
     @property
     def phy_config_shape(self):

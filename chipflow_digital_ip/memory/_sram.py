@@ -52,23 +52,35 @@ class SRAMPeripheral(wiring.Component):
     bus : :class:`amaranth_soc.wishbone.Interface`
         Wishbone bus interface.
     """
+
     # TODO raise bus.err if read-only and a bus write is attempted.
     def __init__(self, *, size, data_width=32, granularity=8, writable=True):
-        if not isinstance(size, int) or size <= 0 or size & size-1:
-            raise ValueError("Size must be an integer power of two, not {!r}"
-                             .format(size))
+        if not isinstance(size, int) or size <= 0 or size & size - 1:
+            raise ValueError(
+                "Size must be an integer power of two, not {!r}".format(size)
+            )
         if size < data_width // granularity:
-            raise ValueError("Size {} cannot be lesser than the data width/granularity ratio "
-                             "of {} ({} / {})"
-                              .format(size, data_width // granularity, data_width, granularity))
+            raise ValueError(
+                "Size {} cannot be lesser than the data width/granularity ratio "
+                "of {} ({} / {})".format(
+                    size, data_width // granularity, data_width, granularity
+                )
+            )
 
         size_words = (size * granularity) // data_width
-        self._mem  = memory.Memory(depth=size_words, shape=data_width, init=[])
+        self._mem = memory.Memory(depth=size_words, shape=data_width, init=[])
 
-        super().__init__({
-            "bus": In(wishbone.Signature(addr_width=exact_log2(size_words), data_width=data_width,
-                                         granularity=granularity)),
-        })
+        super().__init__(
+            {
+                "bus": In(
+                    wishbone.Signature(
+                        addr_width=exact_log2(size_words),
+                        data_width=data_width,
+                        granularity=granularity,
+                    )
+                ),
+            }
+        )
 
         memory_map = MemoryMap(addr_width=exact_log2(size), data_width=granularity)
         memory_map.add_resource(name=("mem",), size=size, resource=self)

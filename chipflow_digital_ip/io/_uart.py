@@ -11,16 +11,19 @@ from . import _rfc_uart
 
 __all__ = ["UARTPeripheral"]
 
+
 class UARTPhyRx(wiring.Component):
     class Signature(wiring.Signature):
         def __init__(self):
-            super().__init__({
-                "rst":    Out(1),
-                "config":   Out(data.StructLayout({"divisor": unsigned(24)})),
-                "symbols":  In(stream.Signature(unsigned(8))),
-                "overflow": In(1),
-                "error":    In(1),
-            })
+            super().__init__(
+                {
+                    "rst": Out(1),
+                    "config": Out(data.StructLayout({"divisor": unsigned(24)})),
+                    "symbols": In(stream.Signature(unsigned(8))),
+                    "overflow": In(1),
+                    "error": In(1),
+                }
+            )
 
     def __init__(self, port, init_divisor):
         super().__init__(self.Signature().flip())
@@ -49,10 +52,8 @@ class UARTPhyRx(wiring.Component):
 
         m.d.comb += [
             lower.i.eq(self._port.i),
-
             lower.divisor.eq(self.config.divisor),
             lower.ack.eq(1),
-
             self.error.eq(lower.err.frame),
         ]
 
@@ -62,11 +63,13 @@ class UARTPhyRx(wiring.Component):
 class UARTPhyTx(wiring.Component):
     class Signature(wiring.Signature):
         def __init__(self):
-            super().__init__({
-                "rst":   Out(1),
-                "config":  Out(data.StructLayout({"divisor": unsigned(24)})),
-                "symbols": Out(stream.Signature(unsigned(8)))
-            })
+            super().__init__(
+                {
+                    "rst": Out(1),
+                    "config": Out(data.StructLayout({"divisor": unsigned(24)})),
+                    "symbols": Out(stream.Signature(unsigned(8))),
+                }
+            )
 
     def __init__(self, port, init_divisor):
         super().__init__(self.Signature().flip())
@@ -82,9 +85,7 @@ class UARTPhyTx(wiring.Component):
 
         m.d.comb += [
             self._port.o.eq(lower.o),
-
             lower.divisor.eq(self.config.divisor),
-
             lower.data.eq(self.symbols.payload),
             lower.ack.eq(self.symbols.valid),
             self.symbols.ready.eq(lower.rdy),
@@ -96,10 +97,12 @@ class UARTPhyTx(wiring.Component):
 class UARTPhy(wiring.Component):
     class Signature(wiring.Signature):
         def __init__(self):
-            super().__init__({
-                "rx": Out(UARTPhyRx.Signature()),
-                "tx": Out(UARTPhyTx.Signature()),
-            })
+            super().__init__(
+                {
+                    "rx": Out(UARTPhyRx.Signature()),
+                    "tx": Out(UARTPhyTx.Signature()),
+                }
+            )
 
     def __init__(self, ports, init_divisor):
         super().__init__(self.Signature().flip())
@@ -119,14 +122,14 @@ class UARTPhy(wiring.Component):
 
 
 class UARTPeripheral(wiring.Component):
-
     class Signature(wiring.Signature):
         def __init__(self):
-            super().__init__({
-                "tx": Out(OutputIOSignature(1)),
-                "rx": Out(InputIOSignature(1)),
-            })
-
+            super().__init__(
+                {
+                    "tx": Out(OutputIOSignature(1)),
+                    "rx": Out(InputIOSignature(1)),
+                }
+            )
 
     """Wrapper for amaranth_soc RFC UART with PHY and chipflow_lib.IOSignature support
 
@@ -157,10 +160,12 @@ class UARTPeripheral(wiring.Component):
             phy_config_init=phy_config_shape.const({"divisor": init_divisor}),
         )
 
-        super().__init__({
-            "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
-            "pins": Out(self.Signature()),
-        })
+        super().__init__(
+            {
+                "bus": In(csr.Signature(addr_width=addr_width, data_width=data_width)),
+                "pins": Out(self.Signature()),
+            }
+        )
         self.bus.memory_map = self._uart.bus.memory_map
         self._phy = UARTPhy(ports=self.pins, init_divisor=init_divisor)
 

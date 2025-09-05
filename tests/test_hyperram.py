@@ -37,6 +37,7 @@ def test_hyperram_smoke():
                 yield hram.data_bus.stb.eq(0)
                 yield hram.data_bus.cyc.eq(0)
             yield
+
     sim.add_sync_process(process)
     with sim.write_vcd("hyperram.vcd", "hyperram.gtkw"):
         sim.run()

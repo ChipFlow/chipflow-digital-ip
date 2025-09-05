@@ -11,27 +11,30 @@ from chipflow_digital_ip.memory._qspi_flash import WishboneQSPIFlashController, 
 
 
 class _QSPIFlashCommand(enum.Enum, shape=8):
-    Read                = 0x03
-    FastRead            = 0x0B
-    FastReadDualOut     = 0x3B
-    FastReadQuadOut     = 0x6B
-    FastReadDualInOut   = 0xBB
-    FastReadQuadInOut   = 0xEB
-    ReadID              = 0x9F
+    Read = 0x03
+    FastRead = 0x0B
+    FastReadDualOut = 0x3B
+    FastReadQuadOut = 0x6B
+    FastReadDualInOut = 0xBB
+    FastReadQuadInOut = 0xEB
+    ReadID = 0x9F
 
 
 class _MockFlash(wiring.Component):
     def __init__(self):
-        super().__init__({"o_octets": In(stream.Signature(data.StructLayout({
-                "chip": range(2),
-                "mode": QSPIMode,
-                "data": 8
-            }))),
-            "i_octets": Out(stream.Signature(data.StructLayout({
-                "data": 8
-            }))),
-            "divisor": In(16),
-        })
+        super().__init__(
+            {
+                "o_octets": In(
+                    stream.Signature(
+                        data.StructLayout(
+                            {"chip": range(2), "mode": QSPIMode, "data": 8}
+                        )
+                    )
+                ),
+                "i_octets": Out(stream.Signature(data.StructLayout({"data": 8}))),
+                "divisor": In(16),
+            }
+        )
 
         # exposed for testbench
         self.last_command = Signal(_QSPIFlashCommand, init=_QSPIFlashCommand.Read)
@@ -44,7 +47,7 @@ class _MockFlash(wiring.Component):
         address = Signal(24)
 
         m.d.comb += self.o_octets.ready.eq(1)
-        m.d.sync += self.i_octets.valid.eq(0) # default
+        m.d.sync += self.i_octets.valid.eq(0)  # default
 
         dummy_bytes = Signal(2)
         expected_addr_mode = Signal(QSPIMode, init=QSPIMode.Dummy)
@@ -64,7 +67,6 @@ class _MockFlash(wiring.Component):
                     expected_data_mode.eq(QSPIMode.GetX1),
                 ]
 
-
         with m.FSM():
             with m.State("Idle"):
                 with m.If(self.o_octets.valid):
@@ -73,9 +75,12 @@ class _MockFlash(wiring.Component):
                     with m.Else():
                         m.d.sync += [
                             Assert(self.o_octets.p.chip == 1),
-                            Assert((self.o_octets.p.mode == QSPIMode.PutX1) | (self.o_octets.p.mode == QSPIMode.Swap)),
+                            Assert(
+                                (self.o_octets.p.mode == QSPIMode.PutX1)
+                                | (self.o_octets.p.mode == QSPIMode.Swap)
+                            ),
                             command.eq(self.o_octets.p.data),
-                            address_count.eq(2)
+                            address_count.eq(2),
                         ]
                         with m.If(self.o_octets.p.mode == QSPIMode.Swap):
                             # send a dummy response to the swap
@@ -91,7 +96,7 @@ class _MockFlash(wiring.Component):
                         Assert(self.o_octets.p.chip == 1),
                         Assert(self.o_octets.p.mode == expected_addr_mode),
                         address.word_select(address_count, 8).eq(self.o_octets.p.data),
-                        address_count.eq(address_count - 1)
+                        address_count.eq(address_count - 1),
                     ]
                     with m.If(address_count == 0):
                         with m.If(dummy_bytes == 0):
@@ -104,7 +109,7 @@ class _MockFlash(wiring.Component):
                     m.d.sync += [
                         Assert(self.o_octets.p.chip == 1),
                         Assert(self.o_octets.p.mode == expected_addr_mode),
-                        dummy_count.eq(dummy_count - 1)
+                        dummy_count.eq(dummy_count - 1),
                     ]
                     with m.If(dummy_count == 0):
                         m.next = "Send-Data"
@@ -116,10 +121,14 @@ class _MockFlash(wiring.Component):
                         m.d.sync += [
                             Assert(self.o_octets.p.chip == 1),
                             Assert(self.o_octets.p.mode == expected_data_mode),
-                            Assert(self.i_octets.ready == 1), # TODO: allowed to be not ready, too
-                            self.i_octets.p.data.eq(0xAA ^ address[0:8]), # TODO: something more useful here
+                            Assert(
+                                self.i_octets.ready == 1
+                            ),  # TODO: allowed to be not ready, too
+                            self.i_octets.p.data.eq(
+                                0xAA ^ address[0:8]
+                            ),  # TODO: something more useful here
                             self.i_octets.valid.eq(1),
-                            address.eq(address + 1)
+                            address.eq(address + 1),
                         ]
             with m.State("Send-ID"):
                 with m.If(self.o_octets.valid):
@@ -129,12 +138,15 @@ class _MockFlash(wiring.Component):
                         m.d.sync += [
                             Assert(self.o_octets.p.chip == 1),
                             Assert(self.o_octets.p.mode == QSPIMode.Swap),
-                            self.i_octets.p.data.eq(C(0xEF4018, 24).word_select(address_count, 8)),
+                            self.i_octets.p.data.eq(
+                                C(0xEF4018, 24).word_select(address_count, 8)
+                            ),
                             self.i_octets.valid.eq(1),
-                            address_count.eq(address_count - 1)
+                            address_count.eq(address_count - 1),
                         ]
         m.d.comb += self.last_command.eq(command)
         return m
+
 
 async def _wb_read(self, ctx, dut, addr, r_data):
     ctx.set(dut.wb_bus.adr, addr >> 2)
@@ -148,8 +160,8 @@ async def _wb_read(self, ctx, dut, addr, r_data):
     ctx.set(dut.wb_bus.stb, 0)
     self.assertEqual(ctx.get(dut.wb_bus.dat_r), r_data)
 
-async def _csr_access(self, ctx, dut, addr, r_stb=0, r_data=0, w_stb=0, w_data=0):
 
+async def _csr_access(self, ctx, dut, addr, r_stb=0, r_data=0, w_stb=0, w_data=0):
     ctx.set(dut.csr_bus.addr, addr)
     ctx.set(dut.csr_bus.r_stb, r_stb)
     ctx.set(dut.csr_bus.w_stb, w_stb)
@@ -164,8 +176,6 @@ async def _csr_access(self, ctx, dut, addr, r_stb=0, r_data=0, w_stb=0, w_data=0
     ctx.set(dut.csr_bus.w_stb, 0)
 
 
-
-
 class QSPITestCase(unittest.TestCase):
     def test_sim(self):
         dut = WishboneQSPIFlashController(addr_width=24, data_width=32)
@@ -177,14 +187,14 @@ class QSPITestCase(unittest.TestCase):
 
         connect(m, dut.spi_bus, phy)
 
-        config_addr       = 0x000
-        raw_control_addr  = 0x004
-        raw_tx_data_addr  = 0x008
-        raw_rx_data_addr  = 0x00c
+        config_addr = 0x000
+        raw_control_addr = 0x004
+        raw_tx_data_addr = 0x008
+        raw_rx_data_addr = 0x00C
 
         async def testbench(ctx):
-            await _wb_read(self, ctx, dut, 0x0, 0xa9a8abaa)
-            await _wb_read(self, ctx, dut, 0x4, 0xadacafae)
+            await _wb_read(self, ctx, dut, 0x0, 0xA9A8ABAA)
+            await _wb_read(self, ctx, dut, 0x4, 0xADACAFAE)
 
             # check default mode is regular read
             self.assertEqual(ctx.get(phy.last_command), _QSPIFlashCommand.Read)
@@ -198,14 +208,30 @@ class QSPITestCase(unittest.TestCase):
             # in bypass mode: bypass ready
             await _csr_access(self, ctx, dut, raw_control_addr, r_stb=1, r_data=1)
             # read ID command
-            await _csr_access(self, ctx, dut, raw_tx_data_addr, w_stb=1, w_data=_QSPIFlashCommand.ReadID)
+            await _csr_access(
+                self,
+                ctx,
+                dut,
+                raw_tx_data_addr,
+                w_stb=1,
+                w_data=_QSPIFlashCommand.ReadID,
+            )
             for _ in range(4):
                 await ctx.tick()
             for byte in reversed(range(3)):
-                await _csr_access(self, ctx, dut, raw_tx_data_addr, w_stb=1, w_data=0xFF)
+                await _csr_access(
+                    self, ctx, dut, raw_tx_data_addr, w_stb=1, w_data=0xFF
+                )
                 for _ in range(4):
                     await ctx.tick()
-                await _csr_access(self, ctx, dut, raw_rx_data_addr, r_stb=1, r_data=((0xEF4018 >> (8 * byte)) & 0xFF))
+                await _csr_access(
+                    self,
+                    ctx,
+                    dut,
+                    raw_rx_data_addr,
+                    r_stb=1,
+                    r_data=((0xEF4018 >> (8 * byte)) & 0xFF),
+                )
 
             # exit bypass mode
             await _csr_access(self, ctx, dut, config_addr, w_stb=1, w_data=0)
@@ -215,14 +241,16 @@ class QSPITestCase(unittest.TestCase):
             await _csr_access(self, ctx, dut, raw_control_addr, r_stb=1, r_data=0)
 
             # check that WB functions again
-            await _wb_read(self, ctx, dut, 0x4, 0xadacafae)
+            await _wb_read(self, ctx, dut, 0x4, 0xADACAFAE)
 
             # switch to fast read mode
-            await _csr_access(self, ctx, dut, config_addr, w_stb=1, w_data=(0x01 << 1) | (0x01 << 3)) # X1Fast, 1 dummy byte
+            await _csr_access(
+                self, ctx, dut, config_addr, w_stb=1, w_data=(0x01 << 1) | (0x01 << 3)
+            )  # X1Fast, 1 dummy byte
             for _ in range(1):
                 await ctx.tick()
             # check fast read mode
-            await _wb_read(self, ctx, dut, 0x4, 0xadacafae)
+            await _wb_read(self, ctx, dut, 0x4, 0xADACAFAE)
             self.assertEqual(ctx.get(phy.last_command), _QSPIFlashCommand.FastRead)
 
         sim = Simulator(m)

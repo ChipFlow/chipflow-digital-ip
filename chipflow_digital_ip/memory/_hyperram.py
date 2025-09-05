@@ -5,7 +5,15 @@
 # Copyright (c) 2021-2022 gatecat <gatecat@ds0.me>
 # SPDX-License-Identifier: BSD-2-Clause
 
-from amaranth import Module, ClockSignal, ResetSignal, Signal, unsigned, ClockDomain, Cat
+from amaranth import (
+    Module,
+    ClockSignal,
+    ResetSignal,
+    Signal,
+    unsigned,
+    ClockDomain,
+    Cat,
+)
 from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, connect, flipped
 from amaranth.utils import ceil_log2
@@ -45,29 +53,34 @@ class HyperRAM(wiring.Component):
             rwds: Read/Write Data Strobe
             dq: Data Input/Output.
         """
+
         def __init__(self, *, cs_count=1):
-            super().__init__({
-                "clk": Out(OutputIOSignature(1)),
-                "csn": Out(OutputIOSignature(cs_count)),
-                "rstn": Out(OutputIOSignature(1)),
-                "rwds": Out(BidirIOSignature(1)),
-                "dq": Out(BidirIOSignature(8)),
-            })
+            super().__init__(
+                {
+                    "clk": Out(OutputIOSignature(1)),
+                    "csn": Out(OutputIOSignature(cs_count)),
+                    "rstn": Out(OutputIOSignature(1)),
+                    "rwds": Out(BidirIOSignature(1)),
+                    "dq": Out(BidirIOSignature(8)),
+                }
+            )
 
     class CtrlConfig(csr.Register, access="rw"):
         def __init__(self, init_latency):
-            super().__init__({
-                "latency": csr.Field(csr.action.RW, unsigned(4), init=init_latency),
-            })
+            super().__init__(
+                {
+                    "latency": csr.Field(csr.action.RW, unsigned(4), init=init_latency),
+                }
+            )
 
     class HRAMConfig(csr.Register, access="w"):
         val: csr.Field(csr.action.W, unsigned(32))
 
     def __init__(self, mem_name=("mem",), *, cs_count=1, init_latency=7):
         self.cs_count = cs_count
-        self.size = 2**23 * self.cs_count # 8MB per CS pin
+        self.size = 2**23 * self.cs_count  # 8MB per CS pin
         self.init_latency = init_latency
-        assert self.init_latency in (6, 7) # TODO: anything else possible ?
+        assert self.init_latency in (6, 7)  # TODO: anything else possible ?
 
         regs = csr.Builder(addr_width=3, data_width=8)
 
@@ -80,12 +93,23 @@ class HyperRAM(wiring.Component):
         data_memory_map = MemoryMap(addr_width=ceil_log2(self.size), data_width=8)
         data_memory_map.add_resource(name=mem_name, size=self.size, resource=self)
 
-        super().__init__({
-            "ctrl_bus": In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
-            "data_bus": In(wishbone.Signature(addr_width=ceil_log2(self.size >> 2), data_width=32,
-                           granularity=8)),
-            "pins": Out(self.Signature()),
-        })
+        super().__init__(
+            {
+                "ctrl_bus": In(
+                    csr.Signature(
+                        addr_width=regs.addr_width, data_width=regs.data_width
+                    )
+                ),
+                "data_bus": In(
+                    wishbone.Signature(
+                        addr_width=ceil_log2(self.size >> 2),
+                        data_width=32,
+                        granularity=8,
+                    )
+                ),
+                "pins": Out(self.Signature()),
+            }
+        )
         self.ctrl_bus.memory_map = ctrl_memory_map
         self.data_bus.memory_map = data_memory_map
 
@@ -122,7 +146,7 @@ class HyperRAM(wiring.Component):
             m.d.neg += clk.eq(0)
         with m.Elif(counter.any()):
             m.d.neg += clk.eq(~clk)
-            m.d.sync += counter.eq(counter-1)
+            m.d.sync += counter.eq(counter - 1)
         with m.If(counter.any()):
             # move shift register (sample/output data) on posedge
             m.d.sync += sr.eq(Cat(self.pins.dq.i, sr[:-8]))
@@ -140,21 +164,21 @@ class HyperRAM(wiring.Component):
                 m.d.sync += [
                     counter.eq(0),
                     self.pins.rwds.oe.eq(0),
-                    csn.eq((1 << self.cs_count) - 1), # all disabled
+                    csn.eq((1 << self.cs_count) - 1),  # all disabled
                 ]
-                with m.If(self.data_bus.stb & self.data_bus.cyc): # data bus activity
+                with m.If(self.data_bus.stb & self.data_bus.cyc):  # data bus activity
                     m.d.sync += [
                         csn.eq(~(1 << (self.data_bus.adr[21:]))),
                         self.pins.dq.oe.eq(1),
                         counter.eq(6),
                         # Assign CA
-                        sr[47].eq(~self.data_bus.we),           # R/W#
-                        sr[46].eq(0),                           # memory space
-                        sr[45].eq(1),                           # linear burst
+                        sr[47].eq(~self.data_bus.we),  # R/W#
+                        sr[46].eq(0),  # memory space
+                        sr[45].eq(1),  # linear burst
                         sr[16:45].eq(self.data_bus.adr[2:21]),  # upper address
-                        sr[4:16].eq(0),                         # RFU
-                        sr[1:3].eq(self.data_bus.adr[0:2]),     # lower address
-                        sr[0].eq(0),                            # address LSB (0 for 32-bit xfers)
+                        sr[4:16].eq(0),  # RFU
+                        sr[1:3].eq(self.data_bus.adr[0:2]),  # lower address
+                        sr[0].eq(0),  # address LSB (0 for 32-bit xfers)
                         latched_adr.eq(self.data_bus.adr),
                         latched_we.eq(self.data_bus.we),
                         is_ctrl_write.eq(0),
@@ -162,18 +186,27 @@ class HyperRAM(wiring.Component):
                     m.next = "WAIT_CA"
                 with m.If(self._hram_cfg.f.val.w_stb):  # config register write
                     m.d.sync += [
-                        csn.eq(~(1 << (self._hram_cfg.f.val.w_data[16:16+ceil_log2(self.cs_count)]))),
+                        csn.eq(
+                            ~(
+                                1
+                                << (
+                                    self._hram_cfg.f.val.w_data[
+                                        16 : 16 + ceil_log2(self.cs_count)
+                                    ]
+                                )
+                            )
+                        ),
                         self.pins.dq.oe.eq(1),
                         counter.eq(6),
                         # Assign CA
-                        sr[47].eq(0),      # R/W#
-                        sr[46].eq(1),      # memory space
-                        sr[45].eq(1),      # linear burst
-                        sr[24:45].eq(1),   # upper address
-                        sr[16:24].eq(0),   #
-                        sr[4:16].eq(0),    # RFU
-                        sr[1:3].eq(0),     # lower address
-                        sr[0].eq(0),       # address LSB (0 for 32-bit xfers)
+                        sr[47].eq(0),  # R/W#
+                        sr[46].eq(1),  # memory space
+                        sr[45].eq(1),  # linear burst
+                        sr[24:45].eq(1),  # upper address
+                        sr[16:24].eq(0),  #
+                        sr[4:16].eq(0),  # RFU
+                        sr[1:3].eq(0),  # lower address
+                        sr[0].eq(0),  # address LSB (0 for 32-bit xfers)
                         latched_cfg.eq(self._hram_cfg.f.val.w_data[0:16]),
                         is_ctrl_write.eq(1),
                     ]
@@ -196,9 +229,13 @@ class HyperRAM(wiring.Component):
                     with m.Else():
                         # wait for the specified latency period
                         with m.If(x2_lat):
-                            m.d.sync += counter.eq(4*self._ctrl_cfg.f.latency.data - 2)
+                            m.d.sync += counter.eq(
+                                4 * self._ctrl_cfg.f.latency.data - 2
+                            )
                         with m.Else():
-                            m.d.sync += counter.eq(2*self._ctrl_cfg.f.latency.data - 2)
+                            m.d.sync += counter.eq(
+                                2 * self._ctrl_cfg.f.latency.data - 2
+                            )
                         m.next = "WAIT_LAT"
             with m.State("WAIT_LAT"):
                 m.d.sync += self.pins.dq.oe.eq(0)
@@ -227,17 +264,21 @@ class HyperRAM(wiring.Component):
                     self.pins.rwds.oe.eq(0),
                     self.pins.dq.oe.eq(0),
                     self.data_bus.ack.eq(1),
-                    wait_count.eq(9)
+                    wait_count.eq(9),
                 ]
                 m.next = "WAIT_NEXT"
             with m.State("WAIT_NEXT"):
                 m.d.sync += [
                     self.data_bus.ack.eq(0),
-                    wait_count.eq(wait_count-1),
+                    wait_count.eq(wait_count - 1),
                 ]
                 with m.If(self.data_bus.stb & self.data_bus.cyc & ~self.data_bus.ack):
                     # Is a valid continuation within same page
-                    with m.If((self.data_bus.adr[6:] == latched_adr[6:]) & (self.data_bus.adr[:6] == latched_adr[:6] + 1) & (self.data_bus.we == latched_we)):
+                    with m.If(
+                        (self.data_bus.adr[6:] == latched_adr[6:])
+                        & (self.data_bus.adr[:6] == latched_adr[:6] + 1)
+                        & (self.data_bus.we == latched_we)
+                    ):
                         m.d.sync += [
                             sr[:16].eq(0),
                             sr[16:].eq(self.data_bus.dat_w),

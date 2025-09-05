@@ -23,19 +23,23 @@ class PeripheralTestCase(unittest.TestCase):
         self.assertEqual(dut_2.bus.data_width, 16)
 
     def test_init_wrong_pin_count(self):
-        with self.assertRaisesRegex(TypeError,
-                r"Pin count must be a positive integer, not 'foo'"):
+        with self.assertRaisesRegex(
+            TypeError, r"Pin count must be a positive integer, not 'foo'"
+        ):
             GPIOPeripheral(pin_count="foo", addr_width=2, data_width=8)
-        with self.assertRaisesRegex(TypeError,
-                r"Pin count must be a positive integer, not 0"):
+        with self.assertRaisesRegex(
+            TypeError, r"Pin count must be a positive integer, not 0"
+        ):
             GPIOPeripheral(pin_count=0, addr_width=2, data_width=8)
 
     def test_init_wrong_input_stages(self):
-        with self.assertRaisesRegex(TypeError,
-                r"Input stages must be a non-negative integer, not 'foo'"):
+        with self.assertRaisesRegex(
+            TypeError, r"Input stages must be a non-negative integer, not 'foo'"
+        ):
             GPIOPeripheral(pin_count=1, addr_width=2, data_width=8, input_stages="foo")
-        with self.assertRaisesRegex(TypeError,
-                r"Input stages must be a non-negative integer, not -1"):
+        with self.assertRaisesRegex(
+            TypeError, r"Input stages must be a non-negative integer, not -1"
+        ):
             GPIOPeripheral(pin_count=1, addr_width=2, data_width=8, input_stages=-1)
 
     async def _csr_access(self, ctx, dut, addr, r_stb=0, w_stb=0, w_data=0, r_data=0):
@@ -55,8 +59,8 @@ class PeripheralTestCase(unittest.TestCase):
         """
         dut = GPIOPeripheral(pin_count=4, addr_width=2, data_width=8)
 
-        mode_addr   = 0x0
-        input_addr  = 0x1
+        mode_addr = 0x0
+        input_addr = 0x1
         output_addr = 0x2
         setclr_addr = 0x3
 
@@ -76,11 +80,13 @@ class PeripheralTestCase(unittest.TestCase):
             ctx.set(dut.pins.gpio.i[1], 0)
             ctx.set(dut.pins.gpio.i[3], 0)
             await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0x0)
-            await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0xa)
+            await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0xA)
             await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0x0)
 
             # - write 0xf to Output:
-            await self._csr_access(ctx, dut, output_addr, r_stb=1, r_data=0x0, w_stb=1, w_data=0xf)
+            await self._csr_access(
+                ctx, dut, output_addr, r_stb=1, r_data=0x0, w_stb=1, w_data=0xF
+            )
             await ctx.tick()
             self.assertEqual(ctx.get(dut.pins.gpio.oe), 0b0000)
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b1111)
@@ -92,7 +98,9 @@ class PeripheralTestCase(unittest.TestCase):
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b1010)
 
             # - write 0x0 to Output:
-            await self._csr_access(ctx, dut, output_addr, r_stb=1, r_data=0xa, w_stb=1, w_data=0x0)
+            await self._csr_access(
+                ctx, dut, output_addr, r_stb=1, r_data=0xA, w_stb=1, w_data=0x0
+            )
             await ctx.tick()
             self.assertEqual(ctx.get(dut.pins.gpio.oe), 0b0000)
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b0000)
@@ -104,13 +112,15 @@ class PeripheralTestCase(unittest.TestCase):
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b1010)
 
             # - write 0x0 to Output:
-            await self._csr_access(ctx, dut, output_addr, r_stb=1, r_data=0xa, w_stb=1, w_data=0x0)
+            await self._csr_access(
+                ctx, dut, output_addr, r_stb=1, r_data=0xA, w_stb=1, w_data=0x0
+            )
             await ctx.tick()
             self.assertEqual(ctx.get(dut.pins.gpio.oe), 0b0000)
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b0000)
 
             # - write 0xff to SetClr (no-op):
-            await self._csr_access(ctx, dut, setclr_addr, w_stb=1, w_data=0xff)
+            await self._csr_access(ctx, dut, setclr_addr, w_stb=1, w_data=0xFF)
             await ctx.tick()
             self.assertEqual(ctx.get(dut.pins.gpio.oe), 0b0000)
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b0000)
@@ -131,11 +141,13 @@ class PeripheralTestCase(unittest.TestCase):
             ctx.set(dut.pins.gpio.i[1], 0)
             ctx.set(dut.pins.gpio.i[3], 0)
             await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0x0)
-            await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0xa)
+            await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0xA)
             await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0x0)
 
             # - write 0xf to Output:
-            await self._csr_access(ctx, dut, output_addr, r_stb=1, r_data=0x0, w_stb=1, w_data=0xf)
+            await self._csr_access(
+                ctx, dut, output_addr, r_stb=1, r_data=0x0, w_stb=1, w_data=0xF
+            )
             await ctx.tick()
             self.assertEqual(ctx.get(dut.pins.gpio.oe), 0b1111)
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b1111)
@@ -147,7 +159,9 @@ class PeripheralTestCase(unittest.TestCase):
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b1010)
 
             # - write 0x0 to Output:
-            await self._csr_access(ctx, dut, output_addr, r_stb=1, r_data=0xa, w_stb=1, w_data=0x0)
+            await self._csr_access(
+                ctx, dut, output_addr, r_stb=1, r_data=0xA, w_stb=1, w_data=0x0
+            )
             await ctx.tick()
             self.assertEqual(ctx.get(dut.pins.gpio.oe), 0b1111)
             self.assertEqual(ctx.get(dut.pins.gpio.o), 0b0000)
@@ -172,7 +186,7 @@ class PeripheralTestCase(unittest.TestCase):
             await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0x0)
             ctx.set(dut.pins.gpio.i[1], 1)
             ctx.set(dut.pins.gpio.i[3], 1)
-            await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0xa)
+            await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0xA)
             ctx.set(dut.pins.gpio.i[1], 0)
             ctx.set(dut.pins.gpio.i[3], 0)
             await self._csr_access(ctx, dut, input_addr, r_stb=1, r_data=0x0)

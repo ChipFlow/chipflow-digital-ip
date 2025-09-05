@@ -11,25 +11,31 @@ from pathlib import Path
 
 class _OBISignature(wiring.Signature):
     def __init__(self):
-        super().__init__({
-            "req":    Out(1),
-            "gnt":    In(1),
-            "rvalid": In(1),
-            "we":     Out(1),
-            "be":     Out(4),
-            "addr":   Out(32),
-            "wdata":  Out(32),
-            "rdata":  In(32),
-        })
+        super().__init__(
+            {
+                "req": Out(1),
+                "gnt": In(1),
+                "rvalid": In(1),
+                "we": Out(1),
+                "be": Out(4),
+                "addr": Out(32),
+                "wdata": Out(32),
+                "rdata": In(32),
+            }
+        )
 
 
 class _OBI2Wishbone(wiring.Component):
     # From https://github.com/enjoy-digital/litex/blob/master/litex/soc/cores/cpu/cv32e40p/core.py
     def __init__(self):
-        super().__init__({
-            "obi": In(_OBISignature()),
-            "wb":  Out(wishbone.Signature(addr_width=30, data_width=32, granularity=8)),
-        })
+        super().__init__(
+            {
+                "obi": In(_OBISignature()),
+                "wb": Out(
+                    wishbone.Signature(addr_width=30, data_width=32, granularity=8)
+                ),
+            }
+        )
 
     def elaborate(self, platform):
         m = Module()
@@ -69,21 +75,27 @@ class _OBI2Wishbone(wiring.Component):
                     self.wb.we.eq(we),
                 ]
                 with m.If(self.wb.ack):
-                    m.d.comb += [
-                        self.obi.rvalid.eq(1)
-                    ]
+                    m.d.comb += [self.obi.rvalid.eq(1)]
                     m.next = "IDLE"
         m.d.comb += self.obi.rdata.eq(self.wb.dat_r)
         return m
+
 
 class _Wishbone2OBI(wiring.Component):
     # From https://github.com/enjoy-digital/litex/blob/master/litex/soc/cores/cpu/cv32e40p/core.py
     # This is required because the debug module has a OBI peripheral interface that needs to be adapted, too
     def __init__(self, addr_width=30):
-        super().__init__({
-            "obi": Out(_OBISignature()),
-            "wb":  In(wishbone.Signature(addr_width=addr_width, data_width=32, granularity=8)),
-        })
+        super().__init__(
+            {
+                "obi": Out(_OBISignature()),
+                "wb": In(
+                    wishbone.Signature(
+                        addr_width=addr_width, data_width=32, granularity=8
+                    )
+                ),
+            }
+        )
+
     def elaborate(self, platform):
         m = Module()
         with m.FSM():
@@ -105,31 +117,50 @@ class _Wishbone2OBI(wiring.Component):
         ]
         return m
 
+
 class CV32E40P(wiring.Component):
-    def __init__(self, *, config="default", reset_vector=0x00100000, dm_haltaddress=0xa0000800):
+    def __init__(
+        self, *, config="default", reset_vector=0x00100000, dm_haltaddress=0xA0000800
+    ):
         if config not in ("default",):
-            raise ValueError(f"Unsupported configuration {config!r}; must be one of: 'default'")
+            raise ValueError(
+                f"Unsupported configuration {config!r}; must be one of: 'default'"
+            )
         if not isinstance(reset_vector, int) or reset_vector < 0:
-            raise TypeError(f"Reset vector address must be a non-negative integer, not "
-                            f"{reset_vector!r}")
+            raise TypeError(
+                f"Reset vector address must be a non-negative integer, not "
+                f"{reset_vector!r}"
+            )
         if bits_for(reset_vector) > 32:
-            raise ValueError(f"Reset vector address {reset_vector:#x} cannot be represented as a "
-                             f"32-bit integer")
+            raise ValueError(
+                f"Reset vector address {reset_vector:#x} cannot be represented as a "
+                f"32-bit integer"
+            )
 
         if not isinstance(dm_haltaddress, int) or dm_haltaddress < 0:
-            raise TypeError(f"DM halt address must be a non-negative integer, not "
-                            f"{dm_haltaddress!r}")
+            raise TypeError(
+                f"DM halt address must be a non-negative integer, not "
+                f"{dm_haltaddress!r}"
+            )
         if bits_for(dm_haltaddress) > 32:
-            raise ValueError(f"DM halt address {dm_haltaddress:#x} cannot be represented as a "
-                             f"32-bit integer")
+            raise ValueError(
+                f"DM halt address {dm_haltaddress:#x} cannot be represented as a "
+                f"32-bit integer"
+            )
 
-        super().__init__({
-            "ibus":         Out(wishbone.Signature(addr_width=30, data_width=32, granularity=8)),
-            "dbus":         Out(wishbone.Signature(addr_width=30, data_width=32, granularity=8)),
-            "timer_irq":    In(unsigned(1)),
-            "software_irq": In(unsigned(1)),
-            "debug_req": In(unsigned(1)),
-        })
+        super().__init__(
+            {
+                "ibus": Out(
+                    wishbone.Signature(addr_width=30, data_width=32, granularity=8)
+                ),
+                "dbus": Out(
+                    wishbone.Signature(addr_width=30, data_width=32, granularity=8)
+                ),
+                "timer_irq": In(unsigned(1)),
+                "software_irq": In(unsigned(1)),
+                "debug_req": In(unsigned(1)),
+            }
+        )
 
         self._config = config
         self._reset_vector = reset_vector
@@ -155,24 +186,22 @@ class CV32E40P(wiring.Component):
         m.submodules.ibus_adapt = ibus_adapt = _OBI2Wishbone()
         m.submodules.dbus_adapt = dbus_adapt = _OBI2Wishbone()
 
-        m.submodules.riscv_core = Instance("cv32e40p_top",
+        m.submodules.riscv_core = Instance(
+            "cv32e40p_top",
             i_clk_i=ClockSignal(),
             i_rst_ni=~ResetSignal(),
             i_pulp_clock_en_i=1,
-            i_scan_cg_en_i=0, # not using clock gating for test, so we don't need this either
-
+            i_scan_cg_en_i=0,  # not using clock gating for test, so we don't need this either
             i_dm_halt_addr_i=self._dm_haltaddress,
             i_dm_exception_addr_i=self._dm_haltaddress,
             i_boot_addr_i=self.reset_vector,
             i_mtvec_addr_i=self.reset_vector,
             i_hart_id_i=0,
-
             o_instr_req_o=ibus_adapt.obi.req,
             i_instr_gnt_i=ibus_adapt.obi.gnt,
             i_instr_rvalid_i=ibus_adapt.obi.rvalid,
             o_instr_addr_o=ibus_adapt.obi.addr,
             i_instr_rdata_i=ibus_adapt.obi.rdata,
-
             o_data_req_o=dbus_adapt.obi.req,
             i_data_gnt_i=dbus_adapt.obi.gnt,
             i_data_rvalid_i=dbus_adapt.obi.rvalid,
@@ -181,11 +210,9 @@ class CV32E40P(wiring.Component):
             o_data_addr_o=dbus_adapt.obi.addr,
             o_data_wdata_o=dbus_adapt.obi.wdata,
             i_data_rdata_i=dbus_adapt.obi.rdata,
-
             i_irq_i=ext_irq,
-
             i_debug_req_i=self.debug_req,
-            i_fetch_enable_i=1, # debug?
+            i_fetch_enable_i=1,  # debug?
         )
 
         m.d.comb += ibus_adapt.obi.we.eq(0)
@@ -195,42 +222,55 @@ class CV32E40P(wiring.Component):
 
         if platform is not None:
             path = Path(__file__).parent / "verilog/cv32e40p_conv_sv2v.v"
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 platform.add_file(path.name, f)
         return m
 
+
 class OBIDebugModule(wiring.Component):
     def __init__(self):
-        self._addr_width=12
+        self._addr_width = 12
 
-        super().__init__({
-            "initiator":   Out(wishbone.Signature(addr_width=30, data_width=32, granularity=8)),
-            "target":      In(wishbone.Signature(addr_width=self._addr_width-2, data_width=32, granularity=8)),
-            "jtag_tms":    In(1),
-            "jtag_tdi":    In(1),
-            "jtag_tdo":    Out(1),
-            "jtag_tck":    In(1),
-            "jtag_trst":   In(1),
-            "debug_req":   Out(1),
-            "ndmreset":    Out(1),
-        })
+        super().__init__(
+            {
+                "initiator": Out(
+                    wishbone.Signature(addr_width=30, data_width=32, granularity=8)
+                ),
+                "target": In(
+                    wishbone.Signature(
+                        addr_width=self._addr_width - 2, data_width=32, granularity=8
+                    )
+                ),
+                "jtag_tms": In(1),
+                "jtag_tdi": In(1),
+                "jtag_tdo": Out(1),
+                "jtag_tck": In(1),
+                "jtag_trst": In(1),
+                "debug_req": Out(1),
+                "ndmreset": Out(1),
+            }
+        )
 
         memory_map = MemoryMap(addr_width=self._addr_width, data_width=8)
-        memory_map.add_resource(name=("debug", ), size=2**self._addr_width, resource=self)
+        memory_map.add_resource(
+            name=("debug",), size=2**self._addr_width, resource=self
+        )
         self.target.memory_map = memory_map
 
     def elaborate(self, platform):
         m = Module()
 
         m.submodules.init_adapt = init_adapt = _OBI2Wishbone()
-        m.submodules.tgt_adapt = tgt_adapt = _Wishbone2OBI(addr_width=self._addr_width-2)
+        m.submodules.tgt_adapt = tgt_adapt = _Wishbone2OBI(
+            addr_width=self._addr_width - 2
+        )
 
-        m.submodules.dm_wrap = Instance("dm_wrap",
+        m.submodules.dm_wrap = Instance(
+            "dm_wrap",
             i_clk_i=ClockSignal(),
             i_rst_ni=~ResetSignal(),
             o_ndmreset_o=self.ndmreset,
             o_debug_req_o=self.debug_req,
-
             i_dm_req_i=tgt_adapt.obi.req,
             o_dm_gnt_o=tgt_adapt.obi.gnt,
             i_dm_we_i=tgt_adapt.obi.we,
@@ -239,7 +279,6 @@ class OBIDebugModule(wiring.Component):
             i_dm_wdata_i=tgt_adapt.obi.wdata,
             o_dm_rdata_o=tgt_adapt.obi.rdata,
             o_dm_rvalid_o=tgt_adapt.obi.rvalid,
-
             o_sb_req_o=init_adapt.obi.req,
             o_sb_addr_o=init_adapt.obi.addr,
             o_sb_we_o=init_adapt.obi.we,
@@ -248,12 +287,11 @@ class OBIDebugModule(wiring.Component):
             i_sb_gnt_i=init_adapt.obi.gnt,
             i_sb_rvalid_i=init_adapt.obi.rvalid,
             i_sb_rdata_i=init_adapt.obi.rdata,
-
             i_tck_i=self.jtag_tck,
             i_tms_i=self.jtag_tms,
             i_trst_ni=self.jtag_trst,
             i_tdi_i=self.jtag_tdi,
-            o_tdo_o=self.jtag_tdo
+            o_tdo_o=self.jtag_tdo,
         )
 
         connect(m, init_adapt.wb, flipped(self.initiator))
@@ -261,7 +299,7 @@ class OBIDebugModule(wiring.Component):
 
         if platform is not None:
             path = Path(__file__).parent / "verilog/dm_wrap_conv_sv2v.v"
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 platform.add_file(path.name, f)
 
         return m
