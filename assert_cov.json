@@ -1,0 +1,33 @@
+{
+  "summary": {
+    "active": 3,
+    "total": 3,
+    "percent": 100.0
+  },
+  "assertions": [
+    {
+      "id": "((), 'sync', 0)",
+      "name": "chipflow-digital-ip/tests/test_assert.py:25 | top | sync:assert(1)",
+      "type": "assert",
+      "true": 1,
+      "false": 0,
+      "fail": 0
+    },
+    {
+      "id": "((), 'sync', 1)",
+      "name": "chipflow-digital-ip/tests/test_assert.py:28 | top | sync:assert((~ (& (sig a) (sig b))))",
+      "type": "assert",
+      "true": 1,
+      "false": 0,
+      "fail": 0
+    },
+    {
+      "id": "((), 'sync', 2)",
+      "name": "chipflow-digital-ip/tests/test_assert.py:31 | top | sync:cover((^ (sig a) (sig b)))",
+      "type": "cover",
+      "true": 2,
+      "false": 0,
+      "fail": 0
+    }
+  ]
+}

@@ -418,6 +418,11 @@ def emit_agg_block_summary(json_path="i2c_block_cov.json", label="test_i2c.py",
 AGG_ASSERT_HITS = Counter()
 AGG_ASSERT_INFO = {}
 
+from collections import Counter
+
+AGG_ASSERT_HITS = Counter()
+AGG_ASSERT_INFO = {}
+
 def _short_loc(src_loc):
     if not src_loc:
         return "unknown"
@@ -442,134 +447,211 @@ def _expr_name(expr):
         return str(expr.value)
     return str(expr)
 
-def get_assert_name(domain, node, parent_path=()):
-    loc = _short_loc(getattr(node, "src_loc", None))
-    typ = getattr(node, "_assert_type", "assert")
-    cond = getattr(node, "cond", None) or getattr(node, "test", None) or getattr(node, "expr", None)
-    cond_s = _expr_name(cond) if cond is not None else "?"
-    return f"{loc} | {_safe_path_str(parent_path)} | {domain}:{typ}({cond_s})"
-
-
-def _assert_node_kind(stmt):
-    n = type(stmt).__name__.lower()
+def _assert_node_kind(node):
+    kind = getattr(node, "kind", None)
+    if kind is not None:
+        val = getattr(kind, "value", kind)
+        if isinstance(val, str):
+            v = val.lower()
+            if v in ("assert", "assume", "cover"):
+                return v
+    n = type(node).__name__.lower()
     if "assert" in n: return "assert"
     if "assume" in n: return "assume"
     if "cover"  in n: return "cover"
     return None
 
-def _is_assert_like(stmt):
-    return _assert_node_kind(stmt) is not None
+def _is_assert_like(node):
+    return _assert_node_kind(node) is not None
 
-def tag_all_asserts(fragment, coverage_id=0, parent_path=(), assertid_to_info=None):
-    from amaranth.hdl._ast import Switch
+def _cond_of(node):
+    c = getattr(node, "cond", None)
+    if c is None:
+        c = getattr(node, "test", None)
+    if c is None:
+        c = getattr(node, "expr", None)
+    return c
+
+def get_assert_name(domain, node, parent_path=()):
+    loc = _short_loc(getattr(node, "src_loc", None))
+    typ = getattr(node, "_assert_type", None)
+    if typ is None:
+        k = getattr(node, "kind", None)
+        if k is not None:
+            typ = getattr(k, "value", k)
+    if not typ:
+        typ = "assert"
+    cond = _cond_of(node)
+    cond_s = _expr_name(cond) if cond is not None else "?"
+    return f"{loc} | {_safe_path_str(parent_path)} | {domain}:{typ}({cond_s})"
+
+def _iter_stmts_container(x):
+    if x is None:
+        return
+    if isinstance(x, (list, tuple, set, frozenset)):
+        for s in x:
+            yield s
+    elif isinstance(x, dict):
+        for s in x.values():
+            yield s
+    else:
+        yield x
+
+def _iter_child_objs(obj):
+    if obj is None:
+        return
+    if isinstance(obj, (list, tuple, set, frozenset)):
+        for it in obj:
+            yield it
+        return
+    if isinstance(obj, dict):
+        for it in obj.values():
+            yield it
+        return
+    d = getattr(obj, "__dict__", None)
+    if d:
+        for v in d.values():
+            yield v
+    for slot in getattr(type(obj), "__slots__", ()):
+        try:
+            yield getattr(obj, slot)
+        except Exception:
+            pass
+
+def _walk_stmt(stmt, visit, _seen=None):
+    if stmt is None:
+        return
+    if _seen is None:
+        _seen = set()
+    oid = id(stmt)
+    if oid in _seen:
+        return
+    _seen.add(oid)
+    visit(stmt)
+    for child in _iter_child_objs(stmt):
+        _walk_stmt(child, visit, _seen)
+
+def _iter_formal_roots(fragment):
+    names = []
+    for nm in dir(fragment):
+        lnm = nm.lower()
+        if lnm in ("asserts", "assumes", "covers") or ("formal" in lnm):
+            names.append(nm)
+    for nm in names:
+        try:
+            val = getattr(fragment, nm)
+        except Exception:
+            continue
+        if val is not None:
+            yield nm, val
+
+def tag_all_asserts(fragment, coverage_id=0, parent_path=(), assertid_to_info=None, found_nodes=None):
     if assertid_to_info is None:
         assertid_to_info = {}
+    if found_nodes is None:
+        found_nodes = {}
     if not hasattr(fragment, "statements"):
-        return coverage_id, assertid_to_info
+        return coverage_id, assertid_to_info, found_nodes
     for domain, stmts in fragment.statements.items():
-        for stmt in stmts:
-            if _is_assert_like(stmt) and not hasattr(stmt, "_assert_id"):
-                stmt._assert_id = (parent_path, domain, coverage_id)
-                stmt._assert_type = _assert_node_kind(stmt) or "assert"
-                stmt._assert_name = get_assert_name(domain, stmt, parent_path)
-                assertid_to_info[stmt._assert_id] = (stmt._assert_name, stmt._assert_type)
-                coverage_id += 1
-            if isinstance(stmt, Switch):
-                for _patterns, sub_stmts, _case_src in stmt.cases:
-                    for sub_stmt in sub_stmts:
-                        tmp = type("TempFrag", (), {"statements": {domain: [sub_stmt]}, "subfragments": []})()
-                        coverage_id, assertid_to_info = tag_all_asserts(
-                            tmp, coverage_id, parent_path, assertid_to_info
-                        )
+        for root in _iter_stmts_container(stmts):
+            def visit(s):
+                nonlocal coverage_id
+                if _is_assert_like(s) and not hasattr(s, "_assert_id"):
+                    s._assert_id = (parent_path, domain, coverage_id)
+                    s._assert_type = _assert_node_kind(s) or "assert"
+                    s._assert_name = get_assert_name(domain, s, parent_path)
+                    assertid_to_info[s._assert_id] = (s._assert_name, s._assert_type)
+                    found_nodes[s._assert_id] = (fragment, domain, s)
+                    coverage_id += 1
+            _walk_stmt(root, visit)
+    for nm, container in _iter_formal_roots(fragment):
+        if isinstance(container, dict):
+            for key, nodes in container.items():
+                domain = key if isinstance(key, str) else "sync"
+                for root in _iter_stmts_container(nodes):
+                    def visit(s):
+                        nonlocal coverage_id
+                        if _is_assert_like(s) and not hasattr(s, "_assert_id"):
+                            s._assert_id = (parent_path, domain, coverage_id)
+                            s._assert_type = _assert_node_kind(s) or "assert"
+                            s._assert_name = get_assert_name(domain, s, parent_path)
+                            assertid_to_info[s._assert_id] = (s._assert_name, s._assert_type)
+                            found_nodes[s._assert_id] = (fragment, domain, s)
+                            coverage_id += 1
+                    _walk_stmt(root, visit)
+        else:
+            domain = "sync"
+            for root in _iter_stmts_container(container):
+                def visit(s):
+                    nonlocal coverage_id
+                    if _is_assert_like(s) and not hasattr(s, "_assert_id"):
+                        s._assert_id = (parent_path, domain, coverage_id)
+                        s._assert_type = _assert_node_kind(s) or "assert"
+                        s._assert_name = get_assert_name(domain, s, parent_path)
+                        assertid_to_info[s._assert_id] = (s._assert_name, s._assert_type)
+                        found_nodes[s._assert_id] = (fragment, domain, s)
+                        coverage_id += 1
+                _walk_stmt(root, visit)
     for subfragment, name, _sloc in getattr(fragment, "subfragments", []):
         if hasattr(subfragment, "statements"):
-            coverage_id, assertid_to_info = tag_all_asserts(
-                subfragment, coverage_id, parent_path + (name,), assertid_to_info
+            coverage_id, assertid_to_info, found_nodes = tag_all_asserts(
+                subfragment, coverage_id, parent_path + (name,), assertid_to_info, found_nodes
             )
-    return coverage_id, assertid_to_info
+    return coverage_id, assertid_to_info, found_nodes
 
-def insert_assert_coverage_signals(fragment):
-    from amaranth.hdl._ast import Assign, Const, Signal, Switch as AstSwitch
-    from amaranth.hdl._ir import Fragment as AmaranthFragment
-
+def insert_assert_coverage_signals(fragment, found_nodes):
+    from amaranth import Signal, Const
     coverage_signal_map = {}
-
     def cov_name(assert_id, typ, outcome):
         parent_path, domain, serial = assert_id
         path = "_".join("anon" if p is None else str(p) for p in parent_path) if parent_path else "top"
         return f"cov_{path}_{domain}_{typ}_{outcome}_{serial}"
-
-    def cond_of(node):
-        c = getattr(node, "cond", None)
-        if c is None:
-            c = getattr(node, "test", None)
-        if c is None:
-            c = getattr(node, "expr", None)
-        return c
-
     def make_sig(assert_id, typ, outcome):
         s = Signal(name=cov_name(assert_id, typ, outcome), init=0)
         coverage_signal_map[id(s)] = (assert_id, outcome)
         return s
-
     def truthy(expr):
         try:
             return expr != Const(0)
         except Exception:
             return expr
-
-    def inject_in_stmt_list(domain, stmts):
-        new = []
-        for stmt in stmts:
-            if hasattr(stmt, "_assert_id") and not getattr(stmt, "_assert_injected", False):
-                aid = stmt._assert_id
-                typ = getattr(stmt, "_assert_type", "assert")
-                c = cond_of(stmt)
-                if c is not None:
-                    t = truthy(c)
-                    if typ in ("assert", "assume"):
-                        s_true  = make_sig(aid, typ, "true")
-                        s_false = make_sig(aid, typ, "false")
-                        s_fail  = make_sig(aid, typ, "fail")
-                        new.append(Assign(s_true,  t))
-                        new.append(Assign(s_false, ~t))
-                        new.append(Assign(s_fail,  ~t))
-                    elif typ == "cover":
-                        s_true = make_sig(aid, typ, "true")
-                        new.append(Assign(s_true, t))
-                stmt._assert_injected = True
-
-            new.append(stmt)
-
-            if isinstance(stmt, AstSwitch):
-                for _patterns, sub_stmts, _case_src in stmt.cases:
-                    instrumented = inject_in_stmt_list(domain, list(sub_stmts))
-                    sub_stmts[:] = instrumented
-        return new
-
-    def walk_fragment(frag):
-        if not isinstance(frag, AmaranthFragment):
-            return
-        for domain, stmts in list(frag.statements.items()):
-            frag.statements[domain] = inject_in_stmt_list(domain, list(stmts))
-        for subfrag, _name, _sloc in getattr(frag, "subfragments", []):
-            if hasattr(subfrag, "statements"):
-                walk_fragment(subfrag)
-
-    walk_fragment(fragment)
+    for aid, (frag_of_node, domain, node) in found_nodes.items():
+        typ = getattr(node, "_assert_type", "assert")
+        c = _cond_of(node)
+        if c is None:
+            continue
+        t = truthy(c)
+        if domain not in frag_of_node.statements:
+            frag_of_node.statements[domain] = []
+        dom_list = frag_of_node.statements[domain]
+        if not isinstance(dom_list, list):
+            dom_list = [dom_list]
+        if typ in ("assert", "assume"):
+            s_true  = make_sig(aid, typ, "true")
+            s_false = make_sig(aid, typ, "false")
+            s_fail  = make_sig(aid, typ, "fail")
+            dom_list += [s_true.eq(t), s_false.eq(~t), s_fail.eq(~t)]
+        elif typ == "cover":
+            s_true = make_sig(aid, typ, "true")
+            dom_list += [s_true.eq(t)]
+        frag_of_node.statements[domain] = dom_list
     return coverage_signal_map
 
 def mk_sim_with_assertcov(dut, verbose=False):
-    mod = dut.elaborate(platform=None)
-    fragment = Fragment.get(mod, platform=None)
-    _, assertid_to_info = tag_all_asserts(fragment)
-    coverage_signal_map = insert_assert_coverage_signals(fragment)
+    try:
+        from amaranth.hdl.ir import Fragment
+    except Exception:
+        from amaranth.hdl._ir import Fragment
+    from amaranth.sim import Simulator
+    fragment = Fragment.get(dut, platform=None)
+    _, assertid_to_info, found_nodes = tag_all_asserts(fragment)
+    coverage_signal_map = insert_assert_coverage_signals(fragment, found_nodes)
+    assert_cov = AssertionCoverageObserver(coverage_signal_map, None, assertid_to_info=assertid_to_info)
     sim = Simulator(fragment)
-    assert_cov = AssertionCoverageObserver(coverage_signal_map, sim._engine.state, assertid_to_info=assertid_to_info)
+    assert_cov.state = sim._engine.state
     sim._engine.add_observer(assert_cov)
     if verbose:
-        total = len(assertid_to_info)
-        print(f"[mk_sim_with_assertcov] Instrumented {total} assertion-like nodes.")
+        print(f"[mk_sim_with_assertcov] Instrumented {len(assertid_to_info)} assertion-like nodes.")
     return sim, assert_cov, assertid_to_info, fragment
 
 def merge_assertcov(results, assertid_to_info):
@@ -614,6 +696,7 @@ def emit_agg_assert_summary(json_path="i2c_assertion_cov.json", label="test_i2c.
 
 def emit_assert_summary(json_path="i2c_assertion_cov.json", label="test_i2c.py"):
     return emit_agg_assert_summary(json_path=json_path, label=label)
+
 
 
 ##### EXPRESSION COVERAGE #####

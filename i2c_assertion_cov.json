@@ -1,8 +1,25 @@
 {
   "summary": {
-    "active": 0,
-    "total": 0,
+    "active": 2,
+    "total": 2,
     "percent": 100.0
   },
-  "assertions": []
+  "assertions": [
+    {
+      "id": "(('i2c_checker',), 'comb', 0)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:40 | i2c_checker | comb:assert((| (~ (& (^ (sig sda_prev) (sig i2c_pins__sda__i)) (sig scl_prev))) (| (& (& (== (sig sda_prev) (const 1'd1)) (== (sig i2c_pins__sda__i) (const 1'd0))) (sig i2c_pins__scl__i)) (& (& (== (sig sda_prev) (const 1'd0)) (== (sig i2c_pins__sda__i) (const 1'd1))) (sig i2c_pins__scl__i)))))",
+      "type": "assert",
+      "true": 3,
+      "false": 6,
+      "fail": 6
+    },
+    {
+      "id": "(('i2c_checker',), 'comb', 1)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:44 | i2c_checker | comb:cover((& (& (== (sig sda_prev) (const 1'd1)) (== (sig i2c_pins__sda__i) (const 1'd0))) (sig i2c_pins__scl__i)))",
+      "type": "cover",
+      "true": 6,
+      "false": 0,
+      "fail": 0
+    }
+  ]
 }

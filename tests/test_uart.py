@@ -134,11 +134,12 @@ class PeripheralTestCase(unittest.TestCase):
             sim.run()
 
         results = toggle_cov.get_results()
-        print("=== Toggle Coverage Report ===")
+        toggle_cov.close(0)
+        # print("=== Toggle Coverage Report ===")
 
-        for signal_name, bit_toggles in results.items():
-            print(f"{signal_name}:")
-            for bit, counts in bit_toggles.items():
-                zero_to_one = counts[ToggleDirection.ZERO_TO_ONE]
-                one_to_zero = counts[ToggleDirection.ONE_TO_ZERO]
-                print(f"  Bit {bit}: 0→1={zero_to_one}, 1→0={one_to_zero}")
+        # for signal_name, bit_toggles in results.items():
+        #     print(f"{signal_name}:")
+        #     for bit, counts in bit_toggles.items():
+        #         zero_to_one = counts[ToggleDirection.ZERO_TO_ONE]
+        #         one_to_zero = counts[ToggleDirection.ONE_TO_ZERO]
+        #         print(f"  Bit {bit}: 0→1={zero_to_one}, 1→0={one_to_zero}")

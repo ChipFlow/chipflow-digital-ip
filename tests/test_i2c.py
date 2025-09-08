@@ -4,53 +4,52 @@
 import unittest
 from amaranth import *
 from amaranth.sim import *
-from amaranth.sim._coverage import ToggleCoverageObserver, ToggleDirection, StatementCoverageObserver
+from amaranth.sim._coverage import *
 from chipflow_digital_ip.io import I2CPeripheral
 from tests.test_utils import *
 from amaranth.hdl._ir import Fragment
 from amaranth.hdl import Assert, Cover
 
-# class I2CChecker(Elaboratable):
-#     def __init__(self, pins):
-#         self.pins = pins  # expect dut.i2c.i2c_pins
+class I2CChecker(Elaboratable):
+    def __init__(self, pins):
+        self.pins = pins  # expect dut.i2c.i2c_pins
 
-#     def elaborate(self, platform):
-#         m = Module()
+    def elaborate(self, platform):
+        m = Module()
 
-#         # --- history registers (make sync domain non-empty)
-#         sda_prev = Signal(init=1)
-#         scl_prev = Signal(init=1)
-#         boot = Signal(init=1)  # high for first cycle only
-#         m.d.sync += [
-#             sda_prev.eq(self.pins.sda.i),
-#             scl_prev.eq(self.pins.scl.i),
-#             boot.eq(0),
-#         ]
+        # --- history registers (make sync domain non-empty)
+        sda_prev = Signal(init=1)
+        scl_prev = Signal(init=1)
+        boot = Signal(init=1)  # high for first cycle only
+        m.d.sync += [
+            sda_prev.eq(self.pins.sda.i),
+            scl_prev.eq(self.pins.scl.i),
+            boot.eq(0),
+        ]
 
-#         # --- detect changes between cycles
-#         sda_changed = sda_prev ^ self.pins.sda.i
+        # --- detect changes between cycles
+        sda_changed = sda_prev ^ self.pins.sda.i
 
-#         # START/STOP exceptions (when SCL is high)
-#         start = (sda_prev == 1) & (self.pins.sda.i == 0) & self.pins.scl.i
-#         stop  = (sda_prev == 0) & (self.pins.sda.i == 1) & self.pins.scl.i
-#         allow = start | stop
+        # START/STOP exceptions (when SCL is high)
+        start = (sda_prev == 1) & (self.pins.sda.i == 0) & self.pins.scl.i
+        stop  = (sda_prev == 0) & (self.pins.sda.i == 1) & self.pins.scl.i
+        allow = start | stop
 
-#         # Assert with registered SCL to avoid mid-cycle glitches
-#         with m.If(~boot):
-#             m.d.comb += Assert(~(sda_changed & scl_prev) | allow)
+        # Assert with registered SCL to avoid mid-cycle glitches
+        with m.If(~boot):
+            m.d.comb += Assert(~(sda_changed & scl_prev) | allow)
 
-#         # A couple of covers so coverage will show activity
-#         m.d.comb += [
-#             Cover(start),
-#             Cover(stop),
-#         ]
+        # A couple of covers so coverage will show activity
+        m.d.comb += [
+            Cover(start),
+            Cover(stop),
+        ]
 
-#         # --- keep-alives (see note B below)
-#         comb_keep = Signal()
-#         m.d.comb += comb_keep.eq(comb_keep)
+        # --- keep-alives (see note B below)
+        comb_keep = Signal()
+        m.d.comb += comb_keep.eq(comb_keep)
 
-#         return m
-
+        return m
 class _I2CHarness(Elaboratable):
     def __init__(self):
         self.i2c = I2CPeripheral()
@@ -69,7 +68,7 @@ class _I2CHarness(Elaboratable):
             self.i2c.i2c_pins.sda.i.eq(self.sda),
             self.i2c.i2c_pins.scl.i.eq(self.scl),
         ]
-        # m.submodules.i2c_checker = I2CChecker(self.i2c.i2c_pins)
+        m.submodules.i2c_checker = I2CChecker(self.i2c.i2c_pins)
         return m
 
 class TestI2CPeripheral(unittest.TestCase):
@@ -132,7 +131,6 @@ class TestI2CPeripheral(unittest.TestCase):
         sim.add_testbench(testbench)
         with sim.write_vcd("i2c_start_test.vcd", "i2c_start_test.gtkw"):
             sim.run()
-
         # results = statement_cov.get_results()
         # statement_cov.close(0)
         # merge_stmtcov(results, stmtid_to_info)
@@ -190,6 +188,9 @@ class TestI2CPeripheral(unittest.TestCase):
         # merge_blockcov(results, blk_info)
         # results = expr_cov.get_results()
         # merge_exprcov(results, expr_info)
+        aresults = assert_cov.get_results()
+        assert_cov.close(0)
+        merge_assertcov(aresults, assert_info)
 
     def test_read(self):
         dut = _I2CHarness()
@@ -239,6 +240,9 @@ class TestI2CPeripheral(unittest.TestCase):
         # merge_blockcov(results, blk_info)
         # results = expr_cov.get_results()
         # merge_exprcov(results, expr_info)
+        aresults = assert_cov.get_results()
+        assert_cov.close(0)
+        merge_assertcov(aresults, assert_info)
 
     @classmethod
     def tearDownClass(cls):
