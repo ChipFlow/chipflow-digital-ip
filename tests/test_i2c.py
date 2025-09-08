@@ -68,7 +68,7 @@ class _I2CHarness(Elaboratable):
             self.i2c.i2c_pins.sda.i.eq(self.sda),
             self.i2c.i2c_pins.scl.i.eq(self.scl),
         ]
-        m.submodules.i2c_checker = I2CChecker(self.i2c.i2c_pins)
+        # m.submodules.i2c_checker = I2CChecker(self.i2c.i2c_pins)
         return m
 
 class TestI2CPeripheral(unittest.TestCase):
@@ -102,8 +102,8 @@ class TestI2CPeripheral(unittest.TestCase):
         dut = _I2CHarness()
         # sim, statement_cov, stmtid_to_info, fragment = mk_sim_with_stmtcov(dut)
         # sim, blk_cov, blk_info, _ = mk_sim_with_blockcov(dut, verbose=True)
-        sim, assert_cov, assert_info, fragment = mk_sim_with_assertcov(dut, verbose=True)
-        # sim, expr_cov, expr_info, _ = mk_sim_with_exprcov(dut, verbose=True)
+        # sim, assert_cov, assert_info, fragment = mk_sim_with_assertcov(dut, verbose=True)
+        sim, expr_cov, expr_info, _ = mk_sim_with_exprcov(dut, verbose=True)
 
         async def testbench(ctx):
             await self._write_reg(ctx, dut.i2c, self.REG_DIVIDER, 1, 4)
@@ -136,18 +136,17 @@ class TestI2CPeripheral(unittest.TestCase):
         # merge_stmtcov(results, stmtid_to_info)
         # results = blk_cov.get_results()
         # merge_blockcov(results, blk_info)
-        # results = expr_cov.get_results()
-        # merge_exprcov(results, expr_info)
-        results = assert_cov.get_results()
-        assert_cov.close(0)
-        merge_assertcov(results, assert_info)
+        results = expr_cov.get_results()
+        merge_exprcov(results, expr_info)
+        # results = assert_cov.get_results()
+        # merge_assertcov(results, assert_info)
 
     def test_write(self):
         dut = _I2CHarness()
         # sim, statement_cov, stmtid_to_info, fragment = mk_sim_with_stmtcov(dut)
         # sim, blk_cov, blk_info, _ = mk_sim_with_blockcov(dut, verbose=True)
-        sim, assert_cov, assert_info, fragment = mk_sim_with_assertcov(dut, verbose=True)
-        # sim, expr_cov, expr_info, _ = mk_sim_with_exprcov(dut, verbose=True)
+        # sim, assert_cov, assert_info, fragment = mk_sim_with_assertcov(dut, verbose=True)
+        sim, expr_cov, expr_info, _ = mk_sim_with_exprcov(dut, verbose=True)
 
         async def testbench(ctx):
             await self._write_reg(ctx, dut.i2c, self.REG_DIVIDER, 1, 4)
@@ -186,18 +185,17 @@ class TestI2CPeripheral(unittest.TestCase):
         # merge_stmtcov(results, stmtid_to_info)
         # results = blk_cov.get_results()
         # merge_blockcov(results, blk_info)
-        # results = expr_cov.get_results()
-        # merge_exprcov(results, expr_info)
-        aresults = assert_cov.get_results()
-        assert_cov.close(0)
-        merge_assertcov(aresults, assert_info)
+        results = expr_cov.get_results()
+        merge_exprcov(results, expr_info)
+        # aresults = assert_cov.get_results()
+        # merge_assertcov(aresults, assert_info)
 
     def test_read(self):
         dut = _I2CHarness()
         # sim, statement_cov, stmtid_to_info, fragment = mk_sim_with_stmtcov(dut)
         # sim, blk_cov, blk_info, _ = mk_sim_with_blockcov(dut, verbose=True)
-        sim, assert_cov, assert_info, fragment = mk_sim_with_assertcov(dut, verbose=True)
-        # sim, expr_cov, expr_info, _ = mk_sim_with_exprcov(dut, verbose=True)
+        # sim, assert_cov, assert_info, fragment = mk_sim_with_assertcov(dut, verbose=True)
+        sim, expr_cov, expr_info, _ = mk_sim_with_exprcov(dut, verbose=True)
 
         data = 0xA3
         async def testbench(ctx):
@@ -238,16 +236,15 @@ class TestI2CPeripheral(unittest.TestCase):
         # merge_stmtcov(results, stmtid_to_info)
         # results = blk_cov.get_results()
         # merge_blockcov(results, blk_info)
-        # results = expr_cov.get_results()
-        # merge_exprcov(results, expr_info)
-        aresults = assert_cov.get_results()
-        assert_cov.close(0)
-        merge_assertcov(aresults, assert_info)
+        results = expr_cov.get_results()
+        merge_exprcov(results, expr_info)
+        # aresults = assert_cov.get_results()
+        # merge_assertcov(aresults, assert_info)
 
     @classmethod
     def tearDownClass(cls):
-        emit_assert_summary("i2c_assertion_cov.json", label="test_i2c.py")
+    #     emit_assert_summary("i2c_assertion_cov.json", label="test_i2c.py")
     #     emit_agg_summary("i2c_statement_cov.json", label="tests/test_i2c.py")
     #     emit_agg_block_summary("i2c_block_cov.json", label=__name__)
-    # emit_expr_summary("i2c_expression_cov.json", label="test_i2c.py")
+        emit_expr_summary("i2c_expression_cov.json", label="test_i2c.py")
 
