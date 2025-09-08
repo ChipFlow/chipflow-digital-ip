@@ -28,7 +28,20 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [tool.pdm.build]
-includes = ["**/*.py", "**/*.v", "**/*.yaml"]
+includes = [
+    "**/*.py",
+    "**/*.v",
+    "**/*.yaml"
+    ]
+source-includes = [
+    "**/drivers/*.{c,h,cpp,hpp}"
+    ]
+
+[tool.pdm.build.wheel-data]
+purelib = [
+    {path = "**/drivers/*", relative-to = "."},
+]
+
 
 # Development workflow configuration
 
