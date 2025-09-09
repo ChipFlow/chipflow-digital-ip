@@ -600,7 +600,6 @@ def tag_all_asserts(fragment, coverage_id=0, parent_path=(), assertid_to_info=No
     return coverage_id, assertid_to_info, found_nodes
 
 def insert_assert_coverage_signals(fragment, found_nodes):
-    from amaranth import Signal, Const
     coverage_signal_map = {}
     def cov_name(assert_id, typ, outcome):
         parent_path, domain, serial = assert_id
@@ -642,7 +641,6 @@ def mk_sim_with_assertcov(dut, verbose=False):
         from amaranth.hdl.ir import Fragment
     except Exception:
         from amaranth.hdl._ir import Fragment
-    from amaranth.sim import Simulator
     fragment = Fragment.get(dut, platform=None)
     _, assertid_to_info, found_nodes = tag_all_asserts(fragment)
     coverage_signal_map = insert_assert_coverage_signals(fragment, found_nodes)
@@ -698,21 +696,13 @@ def emit_assert_summary(json_path="i2c_assertion_cov.json", label="test_i2c.py")
     return emit_agg_assert_summary(json_path=json_path, label=label)
 
 
-
 #### EXPRESSION COVERAGE #####
-# ==== Expression coverage (handles string patterns like "1-") ====
-
-from collections import Counter
 from functools import reduce
 from operator import or_ as _bor
-import re
 
 from amaranth.hdl._ir import Fragment as _AmaranthFragment
 from amaranth.hdl._ast import Assign as _AstAssign, Switch as _AstSwitch
 from amaranth.hdl._ast import Const as _AstConst
-from amaranth import Signal, Const
-from amaranth.sim import Simulator
-from amaranth.sim._coverage import Observer
 
 AGG_EXPR_HITS = Counter()
 AGG_EXPR_INFO = {}
@@ -770,11 +760,9 @@ def _iter_boolean_subexpressions_from_assign(stmt):
                 stack.append(sub)
 
 def _pattern_to_mask_value(pattern_str, width):
-    """Convert '01-10' style string into (mask, value) integers (MSB first)."""
     if not re.fullmatch(r"[01-]+", pattern_str):
         raise ValueError(f"Unsupported switch pattern string: {pattern_str!r}")
     if len(pattern_str) != width:
-        # Be strict like Amaranth Patterns: widths must match
         raise ValueError(f"Pattern width {len(pattern_str)} != test width {width}")
     mask = 0
     value = 0
@@ -782,11 +770,9 @@ def _pattern_to_mask_value(pattern_str, width):
         mask <<= 1
         value <<= 1
         if ch == "-":
-            # don't care: mask bit 0, value bit ignored
             pass
         elif ch == "0":
             mask |= 1
-            # value bit stays 0
         elif ch == "1":
             mask |= 1
             value |= 1
@@ -795,26 +781,20 @@ def _pattern_to_mask_value(pattern_str, width):
     return mask, value
 
 def _match_case(test, p):
-    """Return a 1-bit expression that is true iff test matches pattern p."""
-    # Const case
     if isinstance(p, _AstConst):
         return test == p
-    # int-like case
     try:
         return test == Const(int(p), shape=test.shape())
     except Exception:
         pass
-    # string pattern with don't-cares
     if isinstance(p, str):
         mask_int, value_int = _pattern_to_mask_value(p, int(test.shape().width))
         mask = Const(mask_int, shape=test.shape())
         value = Const(value_int, shape=test.shape())
         return (test & mask) == value
-    # fallback (try Const(p) raw; may still fail but keeps behavior explicit)
     return test == Const(p, shape=test.shape())
 
 def _boolean_exprs_from_switch(switch_stmt):
-    """Build boolean predicates for each case (including default) of a Switch."""
     test = switch_stmt.test
     if test is None:
         return []
@@ -837,7 +817,6 @@ def tag_all_expressions(fragment, coverage_id=0, parent_path=(), exprid_to_info=
         exprid_to_info = {}
     if not hasattr(fragment, "statements"):
         return coverage_id, exprid_to_info
-
     for domain, stmts in fragment.statements.items():
         for stmt in stmts:
             if isinstance(stmt, _AstAssign):
@@ -861,7 +840,6 @@ def tag_all_expressions(fragment, coverage_id=0, parent_path=(), exprid_to_info=
                     e._expr_coverage_name = expr_name
                     exprid_to_info[e._expr_coverage_id] = (expr_name, "expr")
                     coverage_id += 1
-
     for subfragment, name, _src_loc in getattr(fragment, "subfragments", []):
         if hasattr(subfragment, "statements"):
             coverage_id, exprid_to_info = tag_all_expressions(
@@ -871,7 +849,6 @@ def tag_all_expressions(fragment, coverage_id=0, parent_path=(), exprid_to_info=
 
 def insert_expression_coverage_signals(fragment):
     coverage_signals = {}
-
     def _inject_in_stmt_list(domain, stmts, parent_path):
         new_list = []
         for stmt in stmts:
@@ -892,7 +869,6 @@ def insert_expression_coverage_signals(fragment):
                     new_list.append(_AstAssign(t_sig, e))
                     new_list.append(_AstAssign(f_sig, ~e))
                 new_list.append(stmt)
-
             elif isinstance(stmt, _AstSwitch):
                 for role, e, _patterns in _boolean_exprs_from_switch(stmt):
                     if not hasattr(e, "_expr_coverage_id"):
@@ -908,18 +884,14 @@ def insert_expression_coverage_signals(fragment):
                         coverage_signals[(cov_id, "F")] = f_sig
                     new_list.append(_AstAssign(t_sig, e))
                     new_list.append(_AstAssign(f_sig, ~e))
-
                 if hasattr(stmt, "cases"):
                     for idx, (patterns, sub_stmts, case_src_loc) in enumerate(stmt.cases):
                         instrumented = _inject_in_stmt_list(domain, list(sub_stmts), parent_path)
                         sub_stmts[:] = instrumented
-
                 new_list.append(stmt)
-
             else:
                 new_list.append(stmt)
         return new_list
-
     def _walk_fragment(frag, parent_path):
         if not isinstance(frag, _AmaranthFragment):
             return
@@ -928,53 +900,20 @@ def insert_expression_coverage_signals(fragment):
         for subfrag, name, _sloc in getattr(frag, "subfragments", []):
             if hasattr(subfrag, "statements"):
                 _walk_fragment(subfrag, parent_path + (name,))
-
     _walk_fragment(fragment, ())
     return coverage_signals
-
-class ExpressionCoverageObserver(Observer):
-    def __init__(self, coverage_signal_map, state, exprid_to_info=None, **kwargs):
-        self.coverage_signal_map = coverage_signal_map
-        self.state = state
-        self.exprid_to_info = exprid_to_info or {}
-        self._expr_hits = {}
-        super().__init__(**kwargs)
-
-    def update_signal(self, timestamp, signal):
-        sig_id = id(signal)
-        if sig_id in self.coverage_signal_map:
-            expr_id, outcome = self.coverage_signal_map[sig_id]
-            key = (expr_id, outcome)
-            self._expr_hits[key] = self._expr_hits.get(key, 0) + 1
-
-    def update_memory(self, timestamp, memory, addr):
-        pass
-
-    def get_results(self):
-        results = {}
-        for (expr_id, outcome), hits in self._expr_hits.items():
-            bucket = results.setdefault(expr_id, {"T": 0, "F": 0})
-            bucket[outcome] += hits
-        return results
-
-    def close(self, timestamp):
-        pass
 
 def mk_sim_with_exprcov(dut, verbose=False):
     mod = dut.elaborate(platform=None)
     fragment = _AmaranthFragment.get(mod, platform=None)
-
     _, exprid_to_info = tag_all_expressions(fragment)
     cov_sigs = insert_expression_coverage_signals(fragment)
-
     coverage_signal_map = {}
     for (expr_cov_id, outcome), sig in cov_sigs.items():
         coverage_signal_map[id(sig)] = (expr_cov_id, outcome)
-
     sim = Simulator(fragment)
     expr_cov = ExpressionCoverageObserver(coverage_signal_map, sim._engine.state, exprid_to_info=exprid_to_info)
     sim._engine.add_observer(expr_cov)
-
     if verbose:
         total_exprs = len({eid for (eid, _outcome) in cov_sigs.keys()})
         print(f"[mk_sim_with_exprcov] Instrumented {total_exprs} boolean sub-expressions ({len(cov_sigs)} signals for T/F).")
@@ -989,23 +928,38 @@ def merge_exprcov(results, exprid_to_info):
         AGG_EXPR_HITS[(eid, "F")] += int(tf.get("F", 0))
 
 def emit_expr_summary(json_path="i2c_expression_cov.json", label="test_i2c.py"):
-    per_expr = {}
-    for eid, (name, typ) in AGG_EXPR_INFO.items():
-        t = int(AGG_EXPR_HITS.get((eid, "T"), 0))
-        f = int(AGG_EXPR_HITS.get((eid, "F"), 0))
-        per_expr[eid] = (name, typ, t, f)
-    total = len(per_expr)
-    hit = sum(1 for eid, (_name, _typ, t, f) in per_expr.items() if t > 0 and f > 0)
+    total = len(AGG_EXPR_INFO)
+    hit = sum(
+        1
+        for eid in AGG_EXPR_INFO
+        if AGG_EXPR_HITS.get((eid, "T"), 0) > 0 and AGG_EXPR_HITS.get((eid, "F"), 0) > 0
+    )
     pct = 100.0 if total == 0 else (hit / total) * 100.0
-    print(f"\n[Expression coverage for {label}] {hit}/{total} = {pct:.1f}% (requires both TRUE and FALSE)")
+    print(f"\n[Expression coverage for {label}] {hit}/{total} = {pct:.1f}%")
+    # items = []
+    # for eid, (name, typ) in AGG_EXPR_INFO.items():
+    #     t = int(AGG_EXPR_HITS.get((eid, "T"), 0))
+    #     f = int(AGG_EXPR_HITS.get((eid, "F"), 0))
+    #     items.append((eid, name, typ, t, f))
+    # items.sort(key=lambda x: x[1])
+    # print("\nExpressions HIT (both T/F):")
+    # for _, name, _, t, f in items:
+    #     if t > 0 and f > 0:
+    #         print(f"  {name} (T={t}, F={f})")
+    # print("\nExpressions NOT fully hit:")
+    # for _, name, _, t, f in items:
+    #     if not (t > 0 and f > 0):
+    #         print(f"  {name} (T={t}, F={f})")
     try:
         import json
         report = []
-        for eid, (name, typ, t, f) in per_expr.items():
+        for eid, (name, typ) in AGG_EXPR_INFO.items():
+            t = int(AGG_EXPR_HITS.get((eid, "T"), 0))
+            f = int(AGG_EXPR_HITS.get((eid, "F"), 0))
             report.append({
                 "id": str(eid),
                 "name": name,
-                "type": "expr",
+                "type": typ,
                 "true_hits": t,
                 "false_hits": f,
                 "covered": bool(t > 0 and f > 0),
@@ -1016,5 +970,3 @@ def emit_expr_summary(json_path="i2c_expression_cov.json", label="test_i2c.py"):
         print(f"Wrote {json_path}")
     except Exception as e:
         print(f"(could not write JSON report: {e})")
-
-# ==== end expression coverage ====

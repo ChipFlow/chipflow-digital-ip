@@ -143,8 +143,6 @@ class AssertionCoverageObserver(Observer):
     def close(self, timestamp):
         pass
 
-
-
 class ExpressionCoverageObserver(Observer):
     def __init__(self, coverage_signal_map, state, exprid_to_info=None, **kwargs):
         self.coverage_signal_map = coverage_signal_map
@@ -152,23 +150,19 @@ class ExpressionCoverageObserver(Observer):
         self.exprid_to_info = exprid_to_info or {}
         self._expr_hits = {}
         super().__init__(**kwargs)
-
     def update_signal(self, timestamp, signal):
         sig_id = id(signal)
         if sig_id in self.coverage_signal_map:
             expr_id, outcome = self.coverage_signal_map[sig_id]
             key = (expr_id, outcome)
             self._expr_hits[key] = self._expr_hits.get(key, 0) + 1
-
     def update_memory(self, timestamp, memory, addr):
         pass
-
     def get_results(self):
         results = {}
         for (expr_id, outcome), hits in self._expr_hits.items():
             bucket = results.setdefault(expr_id, {"T": 0, "F": 0})
             bucket[outcome] += hits
         return results
-
     def close(self, timestamp):
         pass
