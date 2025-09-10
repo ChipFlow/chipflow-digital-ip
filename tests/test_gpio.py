@@ -3,8 +3,11 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import unittest
+import warnings
+
 from amaranth import *
 from amaranth.sim import *
+from amaranth.hdl import UnusedElaboratable
 
 from chipflow_digital_ip.io import GPIOPeripheral
 
@@ -24,11 +27,18 @@ class PeripheralTestCase(unittest.TestCase):
 
     def test_init_wrong_pin_count(self):
         with self.assertRaisesRegex(TypeError,
-                r"Pin count must be a positive integer, not 'foo'"):
+                r"Pin count must be a positive integer, not foo"):
             GPIOPeripheral(pin_count="foo", addr_width=2, data_width=8)
-        with self.assertRaisesRegex(TypeError,
-                r"Pin count must be a positive integer, not 0"):
+        with self.assertRaisesRegex(ValueError,
+                r"Pin pin_count must be a postive integrer less than 32, not -1"):
+            GPIOPeripheral(pin_count=-1, addr_width=2, data_width=8)
+        with self.assertRaisesRegex(ValueError,
+                r"Pin pin_count must be a postive integrer less than 32, not 0"):
             GPIOPeripheral(pin_count=0, addr_width=2, data_width=8)
+        with self.assertRaisesRegex(ValueError,
+                r"Pin pin_count must be a postive integrer less than 32, not 33"):
+            GPIOPeripheral(pin_count=33, addr_width=2, data_width=8)
+
 
     def test_init_wrong_input_stages(self):
         with self.assertRaisesRegex(TypeError,
@@ -53,6 +63,9 @@ class PeripheralTestCase(unittest.TestCase):
         """
         Smoke test GPIO. We assume that amaranth-soc GPIO tests are fully testing functionality.
         """
+
+        warnings.simplefilter(action="ignore", category=UnusedElaboratable)
+
         dut = GPIOPeripheral(pin_count=4, addr_width=2, data_width=8)
 
         mode_addr   = 0x0
