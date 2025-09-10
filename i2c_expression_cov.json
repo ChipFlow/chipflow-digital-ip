@@ -1,13 +1,13 @@
 {
   "summary": {
     "hit": 103,
-    "total": 200,
-    "percent": 51.5
+    "total": 204,
+    "percent": 50.49019607843137
   },
   "expressions": [
     {
       "id": "((), 'comb', 0)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:65 | comb:expr((& (~ (sig i2c_pins__sda__oe)) (sig sda_i)))",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:51 | comb:expr((& (~ (sig i2c_pins__sda__oe)) (sig sda_i)))",
       "type": "expr",
       "true_hits": 28,
       "false_hits": 25,
@@ -15,7 +15,7 @@
     },
     {
       "id": "((), 'comb', 1)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:65 | comb:expr(sda_i)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:51 | comb:expr(sda_i)",
       "type": "expr",
       "true_hits": 11,
       "false_hits": 8,
@@ -23,7 +23,7 @@
     },
     {
       "id": "((), 'comb', 2)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:65 | comb:expr((~ (sig i2c_pins__sda__oe)))",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:51 | comb:expr((~ (sig i2c_pins__sda__oe)))",
       "type": "expr",
       "true_hits": 20,
       "false_hits": 17,
@@ -31,7 +31,7 @@
     },
     {
       "id": "((), 'comb', 3)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:65 | comb:expr(i2c_pins__sda__oe)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:51 | comb:expr(i2c_pins__sda__oe)",
       "type": "expr",
       "true_hits": 17,
       "false_hits": 20,
@@ -39,7 +39,7 @@
     },
     {
       "id": "((), 'comb', 4)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:66 | comb:expr((& (~ (sig i2c_pins__scl__oe)) (sig scl_i)))",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:52 | comb:expr((& (~ (sig i2c_pins__scl__oe)) (sig scl_i)))",
       "type": "expr",
       "true_hits": 57,
       "false_hits": 54,
@@ -47,7 +47,7 @@
     },
     {
       "id": "((), 'comb', 5)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:66 | comb:expr(scl_i)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:52 | comb:expr(scl_i)",
       "type": "expr",
       "true_hits": 3,
       "false_hits": 0,
@@ -55,7 +55,7 @@
     },
     {
       "id": "((), 'comb', 6)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:66 | comb:expr((~ (sig i2c_pins__scl__oe)))",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:52 | comb:expr((~ (sig i2c_pins__scl__oe)))",
       "type": "expr",
       "true_hits": 57,
       "false_hits": 54,
@@ -63,7 +63,7 @@
     },
     {
       "id": "((), 'comb', 7)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:66 | comb:expr(i2c_pins__scl__oe)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:52 | comb:expr(i2c_pins__scl__oe)",
       "type": "expr",
       "true_hits": 54,
       "false_hits": 57,
@@ -71,7 +71,7 @@
     },
     {
       "id": "((), 'comb', 8)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:68 | comb:expr(sda)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:54 | comb:expr(sda)",
       "type": "expr",
       "true_hits": 28,
       "false_hits": 31,
@@ -79,7 +79,7 @@
     },
     {
       "id": "((), 'comb', 9)",
-      "name": "chipflow-digital-ip/tests/test_i2c.py:69 | comb:expr(scl)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:55 | comb:expr(scl)",
       "type": "expr",
       "true_hits": 57,
       "false_hits": 60,
@@ -271,7 +271,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'mux'), 'sync', 33)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:555 | sync:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:555 | sync:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -327,7 +327,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'mux'), 'sync', 40)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:555 | sync:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:555 | sync:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -367,7 +367,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'mux'), 'sync', 45)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:590 | sync:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:590 | sync:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -375,7 +375,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'mux'), 'sync', 46)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:590 | sync:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:590 | sync:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -431,7 +431,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'mux'), 'sync', 53)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:590 | sync:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:590 | sync:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -551,7 +551,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'mux'), 'comb', 68)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:573 | comb:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:573 | comb:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -567,7 +567,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'mux'), 'comb', 70)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:573 | comb:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:573 | comb:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -591,7 +591,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'mux'), 'comb', 73)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:579 | comb:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/bus.py:579 | comb:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -671,7 +671,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'action'), 'comb', 83)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr((slice (sig element__w_data) 0:1))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr(element__w_data[0])",
       "type": "expr",
       "true_hits": 7,
       "false_hits": 10,
@@ -687,7 +687,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'action'), 'comb', 85)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr((slice (sig element__w_data) 1:2))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr(element__w_data[1])",
       "type": "expr",
       "true_hits": 5,
       "false_hits": 8,
@@ -695,7 +695,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'action'), 'comb', 86)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr((slice (sig element__w_data) 2:3))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr(element__w_data[2])",
       "type": "expr",
       "true_hits": 1,
       "false_hits": 4,
@@ -703,7 +703,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'action'), 'comb', 87)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr((slice (sig element__w_data) 3:4))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr(element__w_data[3])",
       "type": "expr",
       "true_hits": 3,
       "false_hits": 6,
@@ -711,7 +711,7 @@
     },
     {
       "id": "(('i2c', 'bridge', 'action'), 'comb', 88)",
-      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr((slice (sig element__w_data) 4:5))",
+      "name": "chipflow-digital-ip/.venv/lib/python3.12/site-packages/amaranth_soc/csr/reg.py:559 | comb:expr(element__w_data[4])",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -1127,7 +1127,7 @@
     },
     {
       "id": "(('i2c', 'i2c'), 'comb', 140)",
-      "name": "chipflow-digital-ip/chipflow_digital_ip/io/glasgow_i2c.py:126 | comb:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/chipflow_digital_ip/io/glasgow_i2c.py:126 | comb:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -1143,7 +1143,7 @@
     },
     {
       "id": "(('i2c', 'i2c'), 'comb', 142)",
-      "name": "chipflow-digital-ip/amaranth/hdl/_dsl.py:598 | comb:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/amaranth/hdl/_dsl.py:598 | comb:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -1159,7 +1159,7 @@
     },
     {
       "id": "(('i2c', 'i2c'), 'comb', 144)",
-      "name": "chipflow-digital-ip/amaranth/hdl/_dsl.py:598 | comb:expr((const 1'd1))",
+      "name": "chipflow-digital-ip/amaranth/hdl/_dsl.py:598 | comb:expr(1)",
       "type": "expr",
       "true_hits": 3,
       "false_hits": 0,
@@ -1351,7 +1351,7 @@
     },
     {
       "id": "(('i2c', 'i2c', 'bus'), 'comb', 168)",
-      "name": "chipflow-digital-ip/chipflow_digital_ip/io/glasgow_i2c.py:35 | comb:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/chipflow_digital_ip/io/glasgow_i2c.py:35 | comb:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -1375,7 +1375,7 @@
     },
     {
       "id": "(('i2c', 'i2c', 'bus'), 'comb', 171)",
-      "name": "chipflow-digital-ip/chipflow_digital_ip/io/glasgow_i2c.py:37 | comb:expr((const 1'd0))",
+      "name": "chipflow-digital-ip/chipflow_digital_ip/io/glasgow_i2c.py:37 | comb:expr(0)",
       "type": "expr",
       "true_hits": 0,
       "false_hits": 3,
@@ -1530,7 +1530,7 @@
       "name": "chipflow-digital-ip/amaranth/lib/cdc.py:106 | sync:expr(i2c_pins__scl__i)",
       "type": "expr",
       "true_hits": 57,
-      "false_hits": 54,
+      "false_hits": 60,
       "covered": true
     },
     {
@@ -1570,7 +1570,7 @@
       "name": "chipflow-digital-ip/amaranth/lib/cdc.py:106 | sync:expr(i2c_pins__sda__i)",
       "type": "expr",
       "true_hits": 28,
-      "false_hits": 25,
+      "false_hits": 31,
       "covered": true
     },
     {
@@ -1604,6 +1604,38 @@
       "true_hits": 28,
       "false_hits": 25,
       "covered": true
+    },
+    {
+      "id": "(('i2c_checker',), 'sync', 200)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:24 | sync:expr(0)",
+      "type": "expr",
+      "true_hits": 0,
+      "false_hits": 3,
+      "covered": false
+    },
+    {
+      "id": "(('i2c_checker',), 'comb', 201)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:30 | comb:switch_case(('1',))",
+      "type": "expr",
+      "true_hits": 0,
+      "false_hits": 0,
+      "covered": false
+    },
+    {
+      "id": "(('i2c_checker',), 'comb', 202)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:30 | comb:switch_default(default)",
+      "type": "expr",
+      "true_hits": 0,
+      "false_hits": 0,
+      "covered": false
+    },
+    {
+      "id": "(('i2c_checker',), 'comb', 203)",
+      "name": "chipflow-digital-ip/tests/test_i2c.py:37 | comb:expr(comb_keep)",
+      "type": "expr",
+      "true_hits": 0,
+      "false_hits": 3,
+      "covered": false
     }
   ]
 }

@@ -115,7 +115,6 @@ class BlockCoverageObserver(Observer):
         pass
 
 
-
 class AssertionCoverageObserver(Observer):
     def __init__(self, coverage_signal_map, state, assertid_to_info=None, **kwargs):
         self.coverage_signal_map = coverage_signal_map
