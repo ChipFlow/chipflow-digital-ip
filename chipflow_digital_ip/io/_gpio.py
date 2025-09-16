@@ -38,9 +38,9 @@ class GPIOPeripheral(wiring.Component):
     Raises
     ------
     :exc:`TypeError`
-        If ``pin_count`` is not a positive integer.
-    :exc:`TypeError`
-        If ``input_stages`` is not a non-negative integer.
+        If ``pin_count`` is not an integer.
+    :exc:`ValueError`
+        If ``pin_count`` is not in the supported range
     """
 
     def __init__(self, *, pin_count, addr_width=4, data_width=8, input_stages=2):
@@ -49,7 +49,7 @@ class GPIOPeripheral(wiring.Component):
 
         if pin_count > 32 or pin_count <= 0:
             # TODO: why?
-            raise ValueError(f"Pin pin_count must be a postive integrer less than 32, not {pin_count}")
+            raise ValueError(f"Pin pin_count must be a positive integer 32 or less, not {pin_count}")
 
         self._gpio = gpio.Peripheral(pin_count=pin_count,
                                      addr_width=addr_width,
