@@ -62,12 +62,20 @@ jobs:
         with:
           submodules: true
 
-      - name: Check out chipflow-examples
+      - name: Check out chipflow-examples ${{ github.head_ref || 'refs/heads/main' }}
         uses: actions/checkout@v4
+        continue-on-error: true
         with:
           repository: ChipFlow/chipflow-examples
           path: chipflow-examples
           ref: ${{ github.head_ref || 'refs/heads/main' }}
+
+      - name: Check out chipflow-examples main
+        uses: actions/checkout@v4
+        if: ${{ failure() && steps.step2.conclusion == 'failure' }} }}
+        with:
+          repository: ChipFlow/chipflow-examples
+          path: chipflow-examples
 
       - name: Set up PDM
         uses: pdm-project/setup-pdm@v4
