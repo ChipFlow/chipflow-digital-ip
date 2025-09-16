@@ -30,15 +30,14 @@ class PeripheralTestCase(unittest.TestCase):
                 r"Pin count must be a positive integer, not foo"):
             GPIOPeripheral(pin_count="foo", addr_width=2, data_width=8)
         with self.assertRaisesRegex(ValueError,
-                r"Pin pin_count must be a postive integrer less than 32, not -1"):
+                r"Pin pin_count must be a positive integer 32 or less, not -1"):
             GPIOPeripheral(pin_count=-1, addr_width=2, data_width=8)
         with self.assertRaisesRegex(ValueError,
-                r"Pin pin_count must be a postive integrer less than 32, not 0"):
+                r"Pin pin_count must be a positive integer 32 or less, not 0"):
             GPIOPeripheral(pin_count=0, addr_width=2, data_width=8)
         with self.assertRaisesRegex(ValueError,
-                r"Pin pin_count must be a postive integrer less than 32, not 33"):
+                r"Pin pin_count must be a positive integer 32 or less, not 33"):
             GPIOPeripheral(pin_count=33, addr_width=2, data_width=8)
-
 
     def test_init_wrong_input_stages(self):
         with self.assertRaisesRegex(TypeError,
