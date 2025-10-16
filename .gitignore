@@ -9,3 +9,8 @@ __pycache__/
 /.pdm-build
 /.venv
 /pdm.lock
+/overrides.txt
+
+# simulation
+*.gtkw
+*.vcd
