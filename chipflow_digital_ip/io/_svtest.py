@@ -4,11 +4,9 @@ import tomli
 
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Dict, Optional, Any, List, Annotated, Literal, Self
+from typing import Dict, Optional, List, Literal, Self
 
-from amaranth import Module, unsigned
 from amaranth.lib import wiring
-from amaranth.lib.wiring import In, Out, flipped, connect
 
 from pydantic import (
         BaseModel, ImportString, JsonValue, ValidationError,
@@ -30,40 +28,42 @@ class Files(BaseModel):
             raise ValueError("You must set `module` or `path`.")
         return self
 
+class GenerateSpinalHDL(BaseModel):
+
+    scala_class: str
+    options: List[str] = []
+
+    def generate(self, source_path: Path, dest_path: Path, name: str, parameters: Dict[str, JsonValue]):
+        gen_args = [o.format(**parameters) for o in self.options]
+        path = source_path / "ext" / "SpinalHDL"
+        args=" ".join(gen_args + [f'--netlist-directory={dest_path.absolute()}', f'--netlist-name={name}'])
+        cmd = f'cd {path} && sbt "lib/runMain {self.scala_class} {args}"'
+        print("!!! "   + cmd)
+        if os.system(cmd) != 0:
+            raise OSError('Failed to run sbt')
+        return [f'{name}.v']
+
 
 class Generators(StrEnum):
     SPINALHDL = auto()
     VERILOG = auto()
 
-    def generate(self, vdir: Path, parameters: Dict[str, list|dict|str|bool|int|float|None], options: List[str]):
-        gen_args = [o.format(**parameters) for o in options]
-        match self.name:
-            case "SPINALHDL":
-                cmd = 'cd {path} && sbt "lib/runMain spinal.lib.com.usb.ohci.UsbOhciWishbone {args}"'.format(
-                    path=vdir / "ext" / "SpinalHDL", args=" ".join(gen_args))
-                print("!!! "   + cmd)
-                if os.system(cmd) != 0:
-                    raise OSError('Failed to run sbt')
-            case _ as v:
-                raise TypeError(f"Undefined generator type: {v}")
-
-
 
 class Generate(BaseModel):
-    parameters: List[str] = []
-    defaults: Optional[Dict[str, JsonValue]] = None
+    parameters: Optional[Dict[str, JsonValue]] = None
     generator: Generators
-    options: List[str] = []
+    spinalhdl: Optional[GenerateSpinalHDL] = None
 
 
 class Port(BaseModel):
     interface: str  # ImportString
     params: Optional[Dict[str, JsonValue]] = None
     vars: Optional[Dict[str, Literal["int"]]] = None
-    map: str | Dict[str, Dict[str, str] | str]  
+    map: str | Dict[str, Dict[str, str] | str]
 
 
 class ExternalWrap(BaseModel):
+    name: str
     files: Files
     generate: Optional[Generate] = None
     clocks: Dict[str, str] = {}
@@ -81,18 +81,32 @@ if __name__ == "__main__":
         wrap = ExternalWrap.model_validate(wrapper)  # Valiate
         print(wrap)
 
-        vloc = Path()
+        source = Path()
         if wrap.files.module:
-            vloc = Path(wrap.files.module.data_location)
+            source = Path(wrap.files.module.data_location)
         elif wrap.files.path:
-            vloc = path
+            source = wrap.files.path
         else:
             assert True
 
         if wrap.generate:
-            wrap.generate.generator.generate(vloc, wrap.generate.defaults, wrap.generate.options)
+            dest = Path("./build/verilog")
+            dest.mkdir(parents=True, exist_ok=True)
+            files = getattr(wrap.generate, wrap.generate.generator.value).generate(source, Path(dest), wrap.name, wrap.generate.parameters)
+            print(f'Generated files: {files}')
 
-        
+            def init(self, **kwargs):
+                for name, value in kwargs.items():
+                    setattr(self, name, value)
+
+            attr = {
+                '__init__': init
+                }
+            #_class = type(wrap.name, wiring.Component, attr)
+
+
+
+
     except ValidationError as e:
         # Format Pydantic validation errors in a user-friendly way
         error_messages = []
