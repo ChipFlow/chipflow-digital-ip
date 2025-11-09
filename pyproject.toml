@@ -49,10 +49,12 @@ purelib = [
 
 [tool.pyright]
 diagnosticMode=false
-typeCheckingMode = "off"
 reportInvalidTypeForm = false
 reportMissingImports = false
 reportUnboundVariable = false
+reportAttributeAccessIssue = false
+reportWildcardImportFromLibrary = false
+ignore = [ "tests", "vendor" ]
 
 [tool.ruff.lint]
 select = ['E4', 'E7', 'E9', 'F', 'W291', 'W293']
@@ -76,4 +78,6 @@ dev = [
     "pytest>=7.2.0",
     "pytest-cov>=0.6",
     "sphinx>=7.0",
+    "pyright>=1.1.407",
+    "amaranth-stubs>=0.1.1",
 ]

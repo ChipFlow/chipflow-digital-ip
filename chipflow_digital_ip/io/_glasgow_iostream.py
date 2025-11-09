@@ -1,4 +1,6 @@
-from amaranth import *
+from typing import Any
+
+from amaranth import In, Out, Module, Clock, Signal, Cat, ClockDomain, ClockSignal, ResetDomain, Shape, Array
 from amaranth.lib import data, wiring, stream, io
 from amaranth.lib.wiring import In, Out
 
@@ -137,8 +139,8 @@ class IOStreamer(wiring.Component):
             "meta": meta_layout,
         }))
 
-    def __init__(self, ioshape, ports, /, *, ratio=1, init=None, meta_layout=0):
-        assert isinstance(ioshape, (int, dict))
+    def __init__(self, ioshape: dict, ports, /, *, ratio=1, init=None, meta_layout=0):
+        assert isinstance(ioshape, dict)
         assert ratio in (1, 2)
 
         self._ioshape = ioshape
@@ -161,7 +163,7 @@ class IOStreamer(wiring.Component):
             buffer_cls, latency = SimulatableDDRBuffer, 3
 
         if isinstance(self._ports, io.PortLike):
-            m.submodules.buffer = buffer = buffer_cls("io", self._ports)
+            m.submodules.buffer = buffer = buffer_cls(io.Direction.Bidir, self._ports)
         if isinstance(self._ports, PortGroup):
             buffer = {}
             for name, sub_port in self._ports.__dict__.items():
@@ -231,7 +233,7 @@ class IOStreamer(wiring.Component):
 
 class IOClocker(wiring.Component):
     @staticmethod
-    def i_stream_signature(ioshape, /, *, _ratio=1, meta_layout=0):
+    def i_stream_signature(ioshape, /, *, _ratio=1, meta_layout:Any=0):
         # Currently the only supported ratio is 1, but this will change in the future for
         # interfaces like HyperBus.
         return stream.Signature(data.StructLayout({
@@ -245,7 +247,7 @@ class IOClocker(wiring.Component):
         }))
 
     @staticmethod
-    def o_stream_signature(ioshape, /, *, ratio=1, meta_layout=0):
+    def o_stream_signature(ioshape, /, *, ratio=1, meta_layout:Any=0):
         return IOStreamer.o_stream_signature(ioshape, ratio=ratio, meta_layout=meta_layout)
 
     def __init__(self, ioshape, *, clock, o_ratio=1, meta_layout=0, divisor_width=16):

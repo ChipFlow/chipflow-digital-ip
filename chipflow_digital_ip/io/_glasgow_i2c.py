@@ -1,4 +1,4 @@
-from amaranth import *
+from amaranth import Clock, Signal, In, Out, Module, Cat, C, Elaboratable
 from amaranth.lib.cdc import FFSynchronizer
 
 
