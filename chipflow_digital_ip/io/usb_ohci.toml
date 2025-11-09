@@ -1,17 +1,21 @@
+name = 'UsbOhciPeripheral'
+
 [files]
 module = 'pythondata_misc_usb_ohci'
 
 [generate]
-parameters = ['nusb', 'dma_data_width', 'usb_clk_freq']
-defaults.nusb = 1
-defaults.dma_data_width = 32
-defaults.usb_clk_freq = 48e6
+parameters.nusb = 1
+parameters.dma_data_width = 32
+parameters.usb_clk_freq = 48e6
 
 generator = 'spinalhdl'
-options = [ '--port-count={nusb}',
-            '--phy-frequency={usb_clk_freq:.0f}',
-            '--dma-width={dma_data_width}',
+
+[generate.spinalhdl]
+options = [ '--port-count {nusb}',
+            '--phy-frequency {usb_clk_freq:.0f}',
+            '--dma-width {dma_data_width}',
           ]
+scala_class = 'spinal.lib.com.usb.ohci.UsbOhciWishbone'
 
 [clocks]
 usb = 'i_phy_clk'
