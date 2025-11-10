@@ -1,10 +1,12 @@
-from typing import Any
-
 from amaranth import In, Out, Module, Clock, Signal, Cat, ClockDomain, ClockSignal, ResetDomain, Shape, Array
 from amaranth.lib import data, wiring, stream, io
 from amaranth.lib.wiring import In, Out
 
+from amaranth_types.types import ShapeLike
+
+
 __all__ = ["IOStreamer", "PortGroup"]
+
 
 class PortGroup:
     """Group of Amaranth library I/O ports.
@@ -120,7 +122,7 @@ class IOStreamer(wiring.Component):
     """
 
     @staticmethod
-    def o_stream_signature(ioshape, /, *, ratio=1, meta_layout=0):
+    def o_stream_signature(ioshape, /, *, ratio=1, meta_layout: ShapeLike = 0):
         return stream.Signature(data.StructLayout({
             "port": _map_ioshape("o", ioshape, lambda width: data.StructLayout({
                 "o":  width if ratio == 1 else data.ArrayLayout(width, ratio),
@@ -131,7 +133,7 @@ class IOStreamer(wiring.Component):
         }))
 
     @staticmethod
-    def i_stream_signature(ioshape, /, *, ratio=1, meta_layout=0):
+    def i_stream_signature(ioshape, /, *, ratio=1, meta_layout: ShapeLike = 0):
         return stream.Signature(data.StructLayout({
             "port": _map_ioshape("i", ioshape, lambda width: data.StructLayout({
                 "i":  width if ratio == 1 else data.ArrayLayout(width, ratio),
@@ -139,7 +141,7 @@ class IOStreamer(wiring.Component):
             "meta": meta_layout,
         }))
 
-    def __init__(self, ioshape: dict, ports, /, *, ratio=1, init=None, meta_layout=0):
+    def __init__(self, ioshape: dict, ports, /, *, ratio=1, init=None, meta_layout: ShapeLike = 0):
         assert isinstance(ioshape, dict)
         assert ratio in (1, 2)
 
@@ -233,7 +235,7 @@ class IOStreamer(wiring.Component):
 
 class IOClocker(wiring.Component):
     @staticmethod
-    def i_stream_signature(ioshape, /, *, _ratio=1, meta_layout:Any=0):
+    def i_stream_signature(ioshape, /, *, _ratio=1, meta_layout: ShapeLike = 0):
         # Currently the only supported ratio is 1, but this will change in the future for
         # interfaces like HyperBus.
         return stream.Signature(data.StructLayout({
@@ -247,10 +249,10 @@ class IOClocker(wiring.Component):
         }))
 
     @staticmethod
-    def o_stream_signature(ioshape, /, *, ratio=1, meta_layout:Any=0):
+    def o_stream_signature(ioshape, /, *, ratio=1, meta_layout: ShapeLike = 0):
         return IOStreamer.o_stream_signature(ioshape, ratio=ratio, meta_layout=meta_layout)
 
-    def __init__(self, ioshape, *, clock, o_ratio=1, meta_layout=0, divisor_width=16):
+    def __init__(self, ioshape, *, clock, o_ratio=1, meta_layout: ShapeLike = 0, divisor_width=16):
         assert isinstance(ioshape, dict)
         assert isinstance(clock, str)
         assert o_ratio in (1, 2)

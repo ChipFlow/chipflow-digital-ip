@@ -102,7 +102,7 @@ if __name__ == "__main__":
             attr = {
                 '__init__': init
                 }
-            #_class = type(wrap.name, wiring.Component, attr)
+            _class = type(wrap.name, (wiring.Component,), attr)
 
 
 
