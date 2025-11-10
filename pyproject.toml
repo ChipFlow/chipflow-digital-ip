@@ -48,7 +48,6 @@ purelib = [
 # Development workflow configuration
 
 [tool.pyright]
-diagnosticMode=false
 reportInvalidTypeForm = false
 reportMissingImports = false
 reportUnboundVariable = false
