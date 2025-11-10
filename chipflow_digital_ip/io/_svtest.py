@@ -28,6 +28,7 @@ class Files(BaseModel):
             raise ValueError("You must set `module` or `path`.")
         return self
 
+
 class GenerateSpinalHDL(BaseModel):
 
     scala_class: str
