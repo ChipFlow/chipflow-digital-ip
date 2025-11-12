@@ -13,7 +13,7 @@ from amaranth.utils import ceil_log2
 from amaranth_soc import csr, wishbone
 from amaranth_soc.memory import MemoryMap
 
-from chipflow_lib.platforms import BidirIOSignature, OutputIOSignature
+from chipflow.platform import BidirIOSignature, OutputIOSignature
 
 __all__ = ["HyperRAM"]
 

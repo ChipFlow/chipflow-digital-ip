@@ -3,7 +3,7 @@ from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, connect, flipped
 
 from amaranth_soc import csr
-from chipflow_lib.platforms import SPISignature, SoftwareDriverSignature
+from chipflow.platform import SPISignature, SoftwareDriverSignature
 
 
 __all__ = ["SPIPeripheral"]

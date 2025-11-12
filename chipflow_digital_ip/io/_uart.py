@@ -5,7 +5,7 @@ from amaranth.lib.wiring import In, Out, flipped, connect
 from amaranth_soc import csr
 from amaranth_stdio.serial import AsyncSerialRX, AsyncSerialTX
 
-from chipflow_lib.platforms import UARTSignature, SoftwareDriverSignature
+from chipflow.platform import UARTSignature, SoftwareDriverSignature
 
 from . import _rfc_uart
 

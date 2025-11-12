@@ -6,7 +6,7 @@ from amaranth.lib.wiring import In, flipped, connect
 
 from amaranth_soc import csr
 
-from chipflow_lib.platforms import SoftwareDriverSignature
+from chipflow.platform import SoftwareDriverSignature
 
 __all__ = ["SoCID"]
 

@@ -3,7 +3,7 @@ from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, flipped, connect
 from amaranth_soc import csr
 
-from chipflow_lib.platforms import SoftwareDriverSignature
+from chipflow.platform import SoftwareDriverSignature
 
 
 __all__ = ["PlatformTimer"]
