@@ -9,7 +9,7 @@ from amaranth_soc.memory import MemoryMap
 from ..io._glasgow_iostream import PortGroup
 from ..memory._glasgow_qspi import QSPIMode, QSPIController
 
-from chipflow_lib.platforms import QSPIFlashSignature, SoftwareDriverSignature
+from chipflow.platform import QSPIFlashSignature, SoftwareDriverSignature
 
 
 class QSPIFlashCommand(enum.Enum, shape=8):

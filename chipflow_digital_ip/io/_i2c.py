@@ -3,7 +3,7 @@ from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, connect, flipped
 
 from amaranth_soc import csr
-from chipflow_lib.platforms import I2CSignature, SoftwareDriverSignature
+from chipflow.platform import I2CSignature, SoftwareDriverSignature
 from ._glasgow_i2c import I2CInitiator
 
 __all__ = ["I2CPeripheral"]
