@@ -2,12 +2,18 @@
 
 # SPDX-License-Identifier: BSD-2-Clause
 
+import warnings
+
 from amaranth import Module
 from amaranth.sim import Simulator
+from amaranth.hdl import UnusedElaboratable
+
 from chipflow_digital_ip.memory import HyperRAM
 
 
 def test_hyperram_smoke():
+    warnings.simplefilter(action="ignore", category=UnusedElaboratable)
+
     m = Module()
     m.submodules.hram = hram = HyperRAM()
     sim = Simulator(m)

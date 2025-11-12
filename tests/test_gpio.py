@@ -13,6 +13,9 @@ from chipflow_digital_ip.io import GPIOPeripheral
 
 
 class PeripheralTestCase(unittest.TestCase):
+    def setUp(self):
+        warnings.simplefilter(action="ignore", category=UnusedElaboratable)
+
     def test_init(self):
         dut_1 = GPIOPeripheral(pin_count=4, addr_width=2, data_width=8)
         self.assertEqual(dut_1.pin_count, 4)
