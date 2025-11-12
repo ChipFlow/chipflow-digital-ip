@@ -38,7 +38,8 @@ class GenerateSpinalHDL(BaseModel):
         gen_args = [o.format(**parameters) for o in self.options]
         path = source_path / "ext" / "SpinalHDL"
         args=" ".join(gen_args + [f'--netlist-directory={dest_path.absolute()}', f'--netlist-name={name}'])
-        cmd = f'cd {path} && sbt "lib/runMain {self.scala_class} {args}"'
+        cmd = f'cd {path} && sbt -J--enable-native-access=ALL-UNNAMED -v "lib/runMain {self.scala_class} {args}"'
+        os.environ["GRADLE_OPTS"] = "--enable-native-access=ALL-UNNAMED"
         print("!!! "   + cmd)
         if os.system(cmd) != 0:
             raise OSError('Failed to run sbt')
