@@ -13,7 +13,7 @@ __all__ = ["GPIOPeripheral"]
 
 class GPIOPeripheral(wiring.Component):
 
-    """Wrapper for amaranth_soc gpio with chipflow_lib.IOSignature support
+    """Wrapper for amaranth_soc gpio with chipflow.IOSignature support
 
     Parameters
     ----------

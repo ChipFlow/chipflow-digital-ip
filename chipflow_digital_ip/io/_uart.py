@@ -119,7 +119,7 @@ class UARTPhy(wiring.Component):
 
 class UARTPeripheral(wiring.Component):
 
-    """Wrapper for amaranth_soc RFC UART with PHY and chipflow_lib.IOSignature support
+    """Wrapper for amaranth_soc RFC UART with PHY and chipflow.IOSignature support
 
     Parameters
     ----------
