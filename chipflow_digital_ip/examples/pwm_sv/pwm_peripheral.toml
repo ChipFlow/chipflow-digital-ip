@@ -1,0 +1,62 @@
+# PWM Peripheral TOML Binding
+# Demonstrates yosys-slang generator for SystemVerilog to RTLIL conversion
+
+name = 'pwm_peripheral'
+
+[files]
+path = 'examples/pwm_sv'
+
+[generate]
+generator = 'yosys_slang'
+
+[generate.yosys_slang]
+top_module = 'pwm_peripheral'
+defines = { SYNTHESIS = '' }
+
+[clocks]
+sys = 'clk_i'
+
+[resets]
+sys = 'rst_ni'
+
+# CSR bus interface for register access
+[ports.csr]
+interface = 'amaranth_soc.csr.Signature'
+
+[ports.csr.params]
+addr_width = 8
+data_width = 32
+
+[ports.csr.map]
+addr = 'i_csr_addr_i'
+w_stb = 'i_csr_we_i'
+w_data = 'i_csr_wdata_i'
+r_data = 'o_csr_rdata_o'
+
+# PWM output pins to pad ring
+[pins.pwm]
+interface = 'chipflow.platform.GPIOSignature'
+
+[pins.pwm.params]
+width = 4
+
+[pins.pwm.map]
+o = 'o_pwm_o'
+oe = 'o_pwm_oe_o'
+
+# Input capture pins from pad ring
+[pins.capture]
+interface = 'amaranth.lib.wiring.In(4)'
+map = 'i_capture_i'
+
+# GPIO pins to pad ring
+[pins.gpio]
+interface = 'chipflow.platform.GPIOSignature'
+
+[pins.gpio.params]
+width = 8
+
+[pins.gpio.map]
+i = 'i_gpio_i'
+o = 'o_gpio_o'
+oe = 'o_gpio_oe_o'

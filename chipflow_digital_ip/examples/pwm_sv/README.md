@@ -1,7 +1,89 @@
-# PWM Peripheral Example (SystemVerilog)
+# PWM Peripheral Example (SystemVerilog with TOML Binding)
 
 This example demonstrates a SystemVerilog peripheral with pad ring connections,
-suitable for conversion to RTLIL using yosys-slang.
+wrapped for Amaranth SoC integration using the TOML binding system and
+yosys-slang for RTLIL generation.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Amaranth SoC                                               │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  VerilogWrapper (generated from pwm_peripheral.toml)  │  │
+│  │                                                        │  │
+│  │  ┌──────────────────────────────────────────────────┐ │  │
+│  │  │  pwm_peripheral.sv (via yosys-slang → RTLIL)     │ │  │
+│  │  └──────────────────────────────────────────────────┘ │  │
+│  │                                                        │  │
+│  │  CSR Bus ◄─────────────────────────► SoC Bus          │  │
+│  │  PWM outputs ──────────────────────► Pad Ring         │  │
+│  │  Capture inputs ◄────────────────── Pad Ring          │  │
+│  │  GPIO ◄────────────────────────────► Pad Ring         │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `pwm_peripheral.sv` | SystemVerilog RTL implementation |
+| `pwm_peripheral.toml` | TOML binding for Amaranth wrapper generation |
+| `pwm_tb.sv` | SystemVerilog testbench for RTL verification |
+| `test_pwm.py` | Cocotb tests for RTL simulation |
+| `Makefile` | Build/simulation automation |
+| `convert_yosys_slang.sh` | Standalone RTLIL conversion script |
+
+## TOML Binding
+
+The `pwm_peripheral.toml` defines how the SystemVerilog module is wrapped:
+
+```toml
+name = 'pwm_peripheral'
+
+[files]
+path = 'examples/pwm_sv'
+
+[generate]
+generator = 'yosys_slang'
+
+[generate.yosys_slang]
+top_module = 'pwm_peripheral'
+
+[clocks]
+sys = 'clk_i'
+
+[resets]
+sys = 'rst_ni'
+
+[ports.csr]
+interface = 'amaranth_soc.csr.Signature'
+# ... port mappings
+
+[pins.pwm]
+interface = 'chipflow.platform.GPIOSignature'
+# ... pin mappings
+```
+
+## Usage in an SoC
+
+```python
+from chipflow_digital_ip.io import load_wrapper_from_toml
+
+# Load the wrapper from TOML
+pwm = load_wrapper_from_toml('examples/pwm_sv/pwm_peripheral.toml')
+
+# Use in your SoC
+class MySoC(Elaboratable):
+    def elaborate(self, platform):
+        m = Module()
+        m.submodules.pwm = pwm
+        # Connect CSR bus, pad ring pins, etc.
+        return m
+```
 
 ## Pad Ring Interface
 
@@ -9,20 +91,20 @@ The peripheral exposes signals that connect to the chip's pad ring:
 
 ### PWM Outputs (Active Drive)
 ```
-pwm_o[3:0]    - PWM output signals
-pwm_oe_o[3:0] - Output enable (active high)
+pwm.o[3:0]    - PWM output signals
+pwm.oe[3:0]   - Output enable (active high)
 ```
 
 ### Input Capture
 ```
-capture_i[3:0] - External signals for input capture
+capture[3:0] - External signals for input capture
 ```
 
 ### GPIO (Bidirectional)
 ```
-gpio_i[7:0]   - Input from pads
-gpio_o[7:0]   - Output to pads
-gpio_oe_o[7:0] - Output enable for pads
+gpio.i[7:0]   - Input from pads
+gpio.o[7:0]   - Output to pads
+gpio.oe[7:0]  - Output enable for pads
 ```
 
 ## Register Map
@@ -47,31 +129,9 @@ gpio_oe_o[7:0] - Output enable for pads
 | 0x44   | GPIO_OE    | GPIO output enable |
 | 0x48   | GPIO_IN    | GPIO input (read-only) |
 
-## Converting to RTLIL
-
-```bash
-./convert_yosys_slang.sh
-```
-
-This produces `rtlil/pwm_peripheral.il` which can be loaded into Yosys:
-
-```tcl
-read_rtlil pwm_peripheral.il
-# Continue with synthesis...
-```
-
-## Parameters
-
-| Parameter      | Default | Description |
-|----------------|---------|-------------|
-| NUM_CHANNELS   | 4       | Number of PWM/capture channels |
-| COUNTER_WIDTH  | 16      | Bit width of PWM counter |
-
 ## Simulation
 
 ### Prerequisites
-
-Install one or more of these simulators:
 
 ```bash
 # Icarus Verilog
@@ -86,36 +146,21 @@ pip install cocotb
 
 ### Pure SystemVerilog Testbench
 
-Run with Icarus Verilog:
 ```bash
-make sim-sv
-```
-
-Run with Verilator:
-```bash
-make sim-sv-verilator
-```
-
-View waveforms (requires GTKWave):
-```bash
-make waves
+make sim-sv          # Icarus Verilog
+make sim-sv-verilator  # Verilator
+make waves           # View in GTKWave
 ```
 
 ### Cocotb Python Tests
 
-Run with Icarus Verilog (default):
 ```bash
-make
-```
-
-Run with Verilator:
-```bash
+make              # Icarus Verilog (default)
 make SIM=verilator
 ```
 
 ### Test Coverage
 
-The testbench covers:
 - Reset behavior
 - PWM channel enable/disable
 - PWM output generation with duty cycle
@@ -124,12 +169,18 @@ The testbench covers:
 - Input capture on rising edges
 - Multiple channel operation
 
-## Files
+## Standalone RTLIL Conversion
 
-| File | Description |
-|------|-------------|
-| `pwm_peripheral.sv` | Main PWM peripheral RTL |
-| `pwm_tb.sv` | SystemVerilog testbench |
-| `test_pwm.py` | Cocotb Python testbench |
-| `Makefile` | Build/simulation automation |
-| `convert_yosys_slang.sh` | RTLIL conversion script |
+For manual conversion without the TOML wrapper:
+
+```bash
+./convert_yosys_slang.sh
+# Produces: rtlil/pwm_peripheral.il
+```
+
+## Parameters
+
+| Parameter      | Default | Description |
+|----------------|---------|-------------|
+| NUM_CHANNELS   | 4       | Number of PWM/capture channels |
+| COUNTER_WIDTH  | 16      | Bit width of PWM counter |

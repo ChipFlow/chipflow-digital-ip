@@ -6,6 +6,7 @@ modules as Amaranth wiring.Component classes. It supports:
 - Automatic Signature generation from TOML port definitions
 - SpinalHDL code generation
 - SystemVerilog to Verilog conversion via sv2v
+- SystemVerilog to RTLIL conversion via yosys-slang
 - Clock and reset signal mapping
 - Port and pin interface mapping to Verilog signals
 """
@@ -179,12 +180,109 @@ class GenerateSV2V(BaseModel):
         return [output_file]
 
 
+class GenerateYosysSlang(BaseModel):
+    """Configuration for SystemVerilog to RTLIL conversion using yosys-slang."""
+
+    include_dirs: List[str] = []
+    defines: Dict[str, str] = {}
+    top_module: Optional[str] = None
+
+    def generate(
+        self, source_path: Path, dest_path: Path, name: str, parameters: Dict[str, JsonValue]
+    ) -> List[Path]:
+        """Convert SystemVerilog files to RTLIL using yosys-slang.
+
+        Args:
+            source_path: Path containing SystemVerilog files
+            dest_path: Output directory for RTLIL output
+            name: Output file name (without extension)
+            parameters: Template parameters (unused for yosys-slang)
+
+        Returns:
+            List of generated RTLIL file paths
+        """
+        # Check if yosys is available
+        if shutil.which("yosys") is None:
+            raise ChipFlowError(
+                "yosys is not installed or not in PATH. "
+                "Install from: https://github.com/YosysHQ/yosys"
+            )
+
+        # Collect all SystemVerilog files
+        sv_files = list(source_path.glob("**/*.sv"))
+        v_files = list(source_path.glob("**/*.v"))
+        all_files = sv_files + v_files
+        if not all_files:
+            raise ChipFlowError(f"No Verilog/SystemVerilog files found in {source_path}")
+
+        # Build yosys script
+        script_lines = []
+
+        # Build read_slang command
+        read_cmd_parts = ["read_slang"]
+
+        # Add defines
+        for define_name, define_value in self.defines.items():
+            if define_value:
+                read_cmd_parts.append(f"-D{define_name}={define_value}")
+            else:
+                read_cmd_parts.append(f"-D{define_name}")
+
+        # Add include directories
+        for inc_dir in self.include_dirs:
+            inc_path = source_path / inc_dir
+            if inc_path.exists():
+                read_cmd_parts.append(f"-I{inc_path}")
+
+        # Add top module if specified
+        if self.top_module:
+            read_cmd_parts.append(f"--top {self.top_module}")
+
+        # Add all source files
+        for f in all_files:
+            read_cmd_parts.append(str(f))
+
+        script_lines.append(" ".join(read_cmd_parts))
+
+        # Hierarchy check only - preserve RTL structure
+        if self.top_module:
+            script_lines.append(f"hierarchy -check -top {self.top_module}")
+        else:
+            script_lines.append("hierarchy -check")
+
+        # Output RTLIL
+        output_file = dest_path / f"{name}.il"
+        script_lines.append(f"write_rtlil {output_file}")
+
+        script = "\n".join(script_lines)
+
+        # Run yosys with slang plugin
+        try:
+            result = subprocess.run(
+                ["yosys", "-m", "slang", "-p", script],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise ChipFlowError(
+                f"yosys-slang conversion failed:\nScript:\n{script}\n"
+                f"Stderr: {e.stderr}\nStdout: {e.stdout}"
+            )
+
+        if not output_file.exists():
+            raise ChipFlowError(f"yosys-slang did not produce output file: {output_file}")
+
+        return [output_file]
+
+
 class Generators(StrEnum):
     """Supported code generators."""
 
     SPINALHDL = auto()
     VERILOG = auto()
     SYSTEMVERILOG = auto()
+    YOSYS_SLANG = auto()
 
 
 class Generate(BaseModel):
@@ -194,6 +292,7 @@ class Generate(BaseModel):
     generator: Generators
     spinalhdl: Optional[GenerateSpinalHDL] = None
     sv2v: Optional[GenerateSV2V] = None
+    yosys_slang: Optional[GenerateYosysSlang] = None
 
 
 class Port(BaseModel):
@@ -499,6 +598,14 @@ def load_wrapper_from_toml(
             # Convert SystemVerilog to Verilog using sv2v
             sv2v_config = config.generate.sv2v or GenerateSV2V()
             generated = sv2v_config.generate(
+                source_path, generate_dest, config.name, parameters
+            )
+            verilog_files.extend(generated)
+
+        elif config.generate.generator == Generators.YOSYS_SLANG:
+            # Convert SystemVerilog to RTLIL using yosys-slang
+            yosys_slang_config = config.generate.yosys_slang or GenerateYosysSlang()
+            generated = yosys_slang_config.generate(
                 source_path, generate_dest, config.name, parameters
             )
             verilog_files.extend(generated)
