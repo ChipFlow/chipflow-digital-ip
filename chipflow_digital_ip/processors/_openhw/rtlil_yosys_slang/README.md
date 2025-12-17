@@ -1,7 +1,9 @@
-# Yosys-Slang Converted Verilog
+# Yosys-Slang RTLIL Output
 
-This directory contains Verilog files converted from SystemVerilog using
-[yosys-slang](https://github.com/povik/yosys-slang).
+This directory contains RTLIL (Yosys intermediate representation) files
+converted from SystemVerilog using [yosys-slang](https://github.com/povik/yosys-slang).
+
+RTLIL preserves the RTL structure for downstream synthesis tools.
 
 ## Prerequisites
 
@@ -25,7 +27,7 @@ This directory contains Verilog files converted from SystemVerilog using
 
 ## Usage
 
-From this directory (`chipflow_digital_ip/processors/_openhw/`):
+From the parent directory (`chipflow_digital_ip/processors/_openhw/`):
 
 ```bash
 # Convert CV32E40P core
@@ -37,8 +39,8 @@ From this directory (`chipflow_digital_ip/processors/_openhw/`):
 
 ## Output Files
 
-- `cv32e40p_conv_yosys_slang.v` - Converted CV32E40P RISC-V core
-- `dm_wrap_conv_yosys_slang.v` - Converted Debug Module wrapper
+- `cv32e40p_yosys_slang.il` - CV32E40P RISC-V core in RTLIL format
+- `dm_wrap_yosys_slang.il` - Debug Module wrapper in RTLIL format
 
 ## Comparison with sv2v
 
@@ -47,9 +49,18 @@ This experiment provides an alternative to the existing sv2v-based conversion:
 | Feature | sv2v | yosys-slang |
 |---------|------|-------------|
 | Approach | Standalone converter | Yosys plugin |
-| Output | Source-level Verilog | Synthesized netlist |
+| Output | Source-level Verilog | RTLIL (Yosys IR) |
 | SV Support | IEEE 1800-2012 | IEEE 1800-2017/2023 |
 | Integration | External tool | Native Yosys flow |
 
-The yosys-slang approach integrates directly into Yosys synthesis flows, while
-sv2v produces more readable source-level Verilog output.
+The yosys-slang approach outputs RTLIL which can be directly loaded into Yosys
+for synthesis, while sv2v produces human-readable Verilog source code.
+
+## Loading RTLIL in Yosys
+
+To use the generated RTLIL files in a Yosys synthesis flow:
+
+```tcl
+read_rtlil cv32e40p_yosys_slang.il
+# ... continue with synthesis passes
+```

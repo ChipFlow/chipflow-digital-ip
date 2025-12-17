@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Convert CV32E40P SystemVerilog to Verilog using yosys-slang
+# Convert CV32E40P SystemVerilog to RTLIL using yosys-slang
 # This is an alternative to sv2v using Yosys with the slang plugin
+# Output is RTLIL (Yosys intermediate representation) for submission
 set -ex
 
 CV32E40P_PATH="${CV32E40P_DIR:=../../../vendor/cv32e40p}"
 DESIGN_RTL_DIR="$CV32E40P_PATH/rtl"
-OUTPUT_DIR="verilog_yosys_slang"
+OUTPUT_DIR="rtlil_yosys_slang"
 
 # Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
@@ -62,13 +63,11 @@ yosys -m slang -p "
         ${INCLUDE_PATHS[*]} \\
         ${SV_FILES[*]}
 
-    # Flatten and optimize the design
+    # Check hierarchy only - no synthesis passes
     hierarchy -check -top cv32e40p_top
-    proc
-    opt_clean
 
-    # Write the converted Verilog output
-    write_verilog -noattr ${OUTPUT_DIR}/cv32e40p_conv_yosys_slang.v
+    # Write RTLIL output (preserves RTL structure for downstream synthesis)
+    write_rtlil ${OUTPUT_DIR}/cv32e40p_yosys_slang.il
 "
 
-echo "Conversion complete: ${OUTPUT_DIR}/cv32e40p_conv_yosys_slang.v"
+echo "Conversion complete: ${OUTPUT_DIR}/cv32e40p_yosys_slang.il"
