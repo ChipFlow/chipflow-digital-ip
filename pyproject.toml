@@ -34,6 +34,8 @@ build-backend = "pdm.backend"
 includes = [
     "**/*.py",
     "**/*.v",
+    "**/*.sv",
+    "**/*.toml",
     "**/*.yaml"
     ]
 source-includes = [
