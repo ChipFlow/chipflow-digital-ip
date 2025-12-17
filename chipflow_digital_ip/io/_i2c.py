@@ -41,9 +41,20 @@ class I2CPeripheral(wiring.Component):
         busy: csr.Field(csr.action.R, unsigned(1))
         ack: csr.Field(csr.action.R, unsigned(1))
 
+    """A minimal I2C controller wrapping the Glasgow core.
+
+    Provides a register-based interface for I2C bus master operations including
+    start/stop condition generation, byte transmission with ACK/NACK handling,
+    and configurable clock speed via a divisor register.
+
+    Attributes
+    ----------
+    i2c_pins : :class:`wiring.PureInterface` of :class:`I2CSignature`
+        I2C pin interface (SDA, SCL).
+    bus : :class:`csr.Interface`
+        CSR bus interface providing access to control and data registers.
     """
-    A minimal I2C controller wrapping the Glasgow core
-    """
+
     def __init__(self):
         regs = csr.Builder(addr_width=5, data_width=8)
 

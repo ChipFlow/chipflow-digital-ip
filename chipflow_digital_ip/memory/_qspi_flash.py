@@ -251,6 +251,29 @@ class WishboneQSPIFlashController(wiring.Component):
 
 
 class QSPIFlash(wiring.Component):
+    """QSPI Flash memory controller peripheral.
+
+    Provides memory-mapped access to SPI flash memory with support for single, dual, and quad
+    SPI modes. Includes both a Wishbone interface for memory-mapped reads and a CSR interface
+    for configuration and raw SPI access.
+
+    Parameters
+    ----------
+    addr_width : :class:`int`
+        Wishbone bus address width, determining the addressable flash space.
+    data_width : :class:`int`
+        Wishbone bus data width (typically 32).
+
+    Attributes
+    ----------
+    pins : :class:`wiring.PureInterface` of :class:`QSPIFlashSignature`
+        QSPI flash pin interface (clk, csn, data).
+    csr_bus : :class:`csr.Interface`
+        CSR bus interface for configuration and raw SPI access.
+    wb_bus : :class:`wishbone.Interface`
+        Wishbone bus interface for memory-mapped flash reads.
+    """
+
     def __init__(self, *, addr_width, data_width):
         super().__init__(
             SoftwareDriverSignature(

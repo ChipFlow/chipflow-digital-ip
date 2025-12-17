@@ -24,7 +24,23 @@ class PlatformTimer(wiring.Component):
         def __init__(self, width):
             super().__init__({"val": csr.Field(csr.action.RW, unsigned(width))})
 
-    """Platform timer peripheral."""
+    """Platform timer peripheral.
+
+    A 48-bit free-running cycle counter with compare/match interrupt capability.
+    Used for system timing, delays, and scheduling in embedded applications.
+
+    The counter increments every clock cycle. When the comparator register is set
+    to a non-zero value and the counter reaches or exceeds that value, an interrupt
+    is generated.
+
+    Attributes
+    ----------
+    bus : :class:`csr.Interface`
+        CSR bus interface providing access to CNT and CMP registers.
+    irq : :class:`Signal`
+        Interrupt output, asserted when CNT >= CMP and CMP != 0.
+    """
+
     def __init__(self):
         self.width = 48
 
