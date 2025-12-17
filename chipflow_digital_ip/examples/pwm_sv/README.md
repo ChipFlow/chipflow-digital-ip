@@ -66,3 +66,70 @@ read_rtlil pwm_peripheral.il
 |----------------|---------|-------------|
 | NUM_CHANNELS   | 4       | Number of PWM/capture channels |
 | COUNTER_WIDTH  | 16      | Bit width of PWM counter |
+
+## Simulation
+
+### Prerequisites
+
+Install one or more of these simulators:
+
+```bash
+# Icarus Verilog
+apt-get install iverilog
+
+# Verilator
+apt-get install verilator
+
+# Cocotb (for Python testbenches)
+pip install cocotb
+```
+
+### Pure SystemVerilog Testbench
+
+Run with Icarus Verilog:
+```bash
+make sim-sv
+```
+
+Run with Verilator:
+```bash
+make sim-sv-verilator
+```
+
+View waveforms (requires GTKWave):
+```bash
+make waves
+```
+
+### Cocotb Python Tests
+
+Run with Icarus Verilog (default):
+```bash
+make
+```
+
+Run with Verilator:
+```bash
+make SIM=verilator
+```
+
+### Test Coverage
+
+The testbench covers:
+- Reset behavior
+- PWM channel enable/disable
+- PWM output generation with duty cycle
+- GPIO output and output enable
+- GPIO input reading
+- Input capture on rising edges
+- Multiple channel operation
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `pwm_peripheral.sv` | Main PWM peripheral RTL |
+| `pwm_tb.sv` | SystemVerilog testbench |
+| `test_pwm.py` | Cocotb Python testbench |
+| `Makefile` | Build/simulation automation |
+| `convert_yosys_slang.sh` | RTLIL conversion script |
