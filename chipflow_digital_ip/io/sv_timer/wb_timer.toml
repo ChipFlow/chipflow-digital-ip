@@ -1,0 +1,78 @@
+# Wishbone Timer/Counter Configuration
+# A simple 32-bit programmable timer with Wishbone B4 interface
+
+name = 'wb_timer'
+
+[files]
+path = '.'
+
+[generate]
+generator = 'systemverilog'
+
+[generate.sv2v]
+top_module = 'wb_timer'
+
+[clocks]
+sys = 'clk'
+
+[resets]
+sys = 'rst_n'
+
+[ports.bus]
+interface = 'amaranth_soc.wishbone.Signature'
+
+[ports.bus.params]
+addr_width = 4
+data_width = 32
+granularity = 8
+
+[ports.bus.map]
+cyc = 'i_wb_cyc'
+stb = 'i_wb_stb'
+we = 'i_wb_we'
+sel = 'i_wb_sel'
+adr = 'i_wb_adr'
+dat_w = 'i_wb_dat'
+dat_r = 'o_wb_dat'
+ack = 'o_wb_ack'
+
+[ports.irq]
+interface = 'amaranth.lib.wiring.Out(1)'
+map = 'o_irq'
+
+[drivers.c]
+header = '''
+#ifndef WB_TIMER_H
+#define WB_TIMER_H
+
+#include <stdint.h>
+
+#define WB_TIMER_CTRL    0x00
+#define WB_TIMER_COMPARE 0x04
+#define WB_TIMER_COUNTER 0x08
+#define WB_TIMER_STATUS  0x0C
+
+#define WB_TIMER_CTRL_ENABLE   (1 << 0)
+#define WB_TIMER_CTRL_IRQ_EN   (1 << 1)
+
+#define WB_TIMER_STATUS_IRQ_PENDING (1 << 0)
+#define WB_TIMER_STATUS_MATCH       (1 << 1)
+
+static inline void wb_timer_enable(volatile uint32_t *base, uint16_t prescaler) {
+    base[0] = (prescaler << 16) | WB_TIMER_CTRL_ENABLE | WB_TIMER_CTRL_IRQ_EN;
+}
+
+static inline void wb_timer_set_compare(volatile uint32_t *base, uint32_t value) {
+    base[1] = value;
+}
+
+static inline uint32_t wb_timer_get_counter(volatile uint32_t *base) {
+    return base[2];
+}
+
+static inline void wb_timer_clear_irq(volatile uint32_t *base) {
+    base[3] = WB_TIMER_STATUS_IRQ_PENDING | WB_TIMER_STATUS_MATCH;
+}
+
+#endif
+'''

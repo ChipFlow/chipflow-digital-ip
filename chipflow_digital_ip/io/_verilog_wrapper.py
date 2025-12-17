@@ -1,16 +1,19 @@
-"""Verilog wrapper for external Verilog/SpinalHDL modules.
+"""Verilog wrapper for external Verilog/SystemVerilog/SpinalHDL modules.
 
 This module provides a TOML-based configuration system for wrapping external Verilog
 modules as Amaranth wiring.Component classes. It supports:
 
 - Automatic Signature generation from TOML port definitions
 - SpinalHDL code generation
+- SystemVerilog to Verilog conversion via sv2v
 - Clock and reset signal mapping
 - Port and pin interface mapping to Verilog signals
 """
 
 import os
 import re
+import shutil
+import subprocess
 from enum import StrEnum, auto
 from importlib import import_module
 from pathlib import Path
@@ -96,11 +99,92 @@ class GenerateSpinalHDL(BaseModel):
         return [f"{name}.v"]
 
 
+class GenerateSV2V(BaseModel):
+    """Configuration for SystemVerilog to Verilog conversion using sv2v."""
+
+    include_dirs: List[str] = []
+    defines: Dict[str, str] = {}
+    top_module: Optional[str] = None
+
+    def generate(
+        self, source_path: Path, dest_path: Path, name: str, parameters: Dict[str, JsonValue]
+    ) -> List[Path]:
+        """Convert SystemVerilog files to Verilog using sv2v.
+
+        Args:
+            source_path: Path containing SystemVerilog files
+            dest_path: Output directory for converted Verilog
+            name: Output file name (without extension)
+            parameters: Template parameters (unused for sv2v)
+
+        Returns:
+            List of generated Verilog file paths
+        """
+        # Check if sv2v is available
+        if shutil.which("sv2v") is None:
+            raise ChipFlowError(
+                "sv2v is not installed or not in PATH. "
+                "Install from: https://github.com/zachjs/sv2v"
+            )
+
+        # Collect all SystemVerilog files
+        sv_files = list(source_path.glob("**/*.sv"))
+        if not sv_files:
+            raise ChipFlowError(f"No SystemVerilog files found in {source_path}")
+
+        # Build sv2v command
+        cmd = ["sv2v"]
+
+        # Add include directories
+        for inc_dir in self.include_dirs:
+            inc_path = source_path / inc_dir
+            if inc_path.exists():
+                cmd.extend(["-I", str(inc_path)])
+
+        # Add defines
+        for define_name, define_value in self.defines.items():
+            if define_value:
+                cmd.append(f"-D{define_name}={define_value}")
+            else:
+                cmd.append(f"-D{define_name}")
+
+        # Add top module if specified
+        if self.top_module:
+            cmd.extend(["--top", self.top_module])
+
+        # Add all SV files
+        cmd.extend(str(f) for f in sv_files)
+
+        # Output file
+        output_file = dest_path / f"{name}.v"
+        cmd.extend(["-w", str(output_file)])
+
+        # Run sv2v
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise ChipFlowError(
+                f"sv2v conversion failed:\nCommand: {' '.join(cmd)}\n"
+                f"Stderr: {e.stderr}\nStdout: {e.stdout}"
+            )
+
+        if not output_file.exists():
+            raise ChipFlowError(f"sv2v did not produce output file: {output_file}")
+
+        return [output_file]
+
+
 class Generators(StrEnum):
     """Supported code generators."""
 
     SPINALHDL = auto()
     VERILOG = auto()
+    SYSTEMVERILOG = auto()
 
 
 class Generate(BaseModel):
@@ -109,6 +193,7 @@ class Generate(BaseModel):
     parameters: Optional[Dict[str, JsonValue]] = None
     generator: Generators
     spinalhdl: Optional[GenerateSpinalHDL] = None
+    sv2v: Optional[GenerateSV2V] = None
 
 
 class Port(BaseModel):
@@ -397,26 +482,37 @@ def load_wrapper_from_toml(
             generate_dest = Path("./build/verilog")
         generate_dest.mkdir(parents=True, exist_ok=True)
 
+        parameters = config.generate.parameters or {}
+
         if config.generate.generator == Generators.SPINALHDL:
             if config.generate.spinalhdl is None:
                 raise ChipFlowError(
                     "SpinalHDL generator selected but no spinalhdl config provided"
                 )
 
-            parameters = config.generate.parameters or {}
             generated = config.generate.spinalhdl.generate(
                 source_path, generate_dest, config.name, parameters
             )
             verilog_files.extend(generate_dest / f for f in generated)
+
+        elif config.generate.generator == Generators.SYSTEMVERILOG:
+            # Convert SystemVerilog to Verilog using sv2v
+            sv2v_config = config.generate.sv2v or GenerateSV2V()
+            generated = sv2v_config.generate(
+                source_path, generate_dest, config.name, parameters
+            )
+            verilog_files.extend(generated)
 
         elif config.generate.generator == Generators.VERILOG:
             # Just use existing Verilog files from source
             for v_file in source_path.glob("**/*.v"):
                 verilog_files.append(v_file)
     else:
-        # No generation - look for Verilog files in source
+        # No generation - look for Verilog and SystemVerilog files in source
         for v_file in source_path.glob("**/*.v"):
             verilog_files.append(v_file)
+        for sv_file in source_path.glob("**/*.sv"):
+            verilog_files.append(sv_file)
 
     return VerilogWrapper(config, verilog_files)
 
