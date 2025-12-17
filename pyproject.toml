@@ -10,7 +10,6 @@ authors = [
 readme = {file = "README.md", content-type = "text/markdown"}
 license-files = [
     "LICENSE*",
-    "vendor/*/*/LICEN?E*",
 ]
 
 requires-python = ">=3.12,<3.14"
@@ -21,6 +20,8 @@ dependencies = [
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio",
     "minerva @ git+https://github.com/minerva-cpu/minerva",
     "pythondata-misc-usb_ohci @ git+https://github.com/robtaylor/pythondata-misc-usb_ohci@update-spinalhdl",
+    "pydantic>=2.0",
+    "tomli>=2.0",
 ]
 
 # Build system configuration
