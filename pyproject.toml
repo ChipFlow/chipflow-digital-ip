@@ -65,15 +65,14 @@ source = "scm"
 test.cmd = "pytest"
 test-cov.cmd = "pytest --cov=chipflow-digital-ip cov-report=term"
 test-cov-html.cmd = "pytest --cov=chipflow-digital-ip --cov-report=html"
-# test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
-test-docs.cmd = "true"
+test-docs.cmd = "sphinx-build -b doctest docs/ docs/_build"
 lint.composite = ["./tools/license_check.sh", "ruff check"]
-#docs.cmd = "sphinx-build docs/ docs/_build/ -W --keep-going"
-doc.cmd = "true"
+doc.cmd = "sphinx-build docs/ docs/_build/"
 
 [dependency-groups]
 dev = [
     "ruff>=0.9.2",
     "pytest>=7.2.0",
     "pytest-cov>=0.6",
+    "sphinx>=7.0",
 ]

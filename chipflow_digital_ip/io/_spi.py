@@ -137,9 +137,20 @@ class SPIPeripheral(wiring.Component):
         recv_full: csr.Field(csr.action.R, unsigned(1))
 
 
+    """A custom, minimal SPI controller.
+
+    Provides a register-based interface for SPI bus master operations with
+    configurable clock polarity, phase, transfer width (up to 32 bits), and
+    clock divisor. Supports both CPOL/CPHA modes via configuration registers.
+
+    Attributes
+    ----------
+    spi_pins : :class:`wiring.PureInterface` of :class:`SPISignature`
+        SPI pin interface (SCK, COPI, CIPO, CSn).
+    bus : :class:`csr.Interface`
+        CSR bus interface providing access to configuration and data registers.
     """
-    A custom, minimal SPI controller
-    """
+
     def __init__(self):
         regs = csr.Builder(addr_width=5, data_width=8)
 

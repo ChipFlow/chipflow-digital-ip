@@ -106,6 +106,38 @@ class _Wishbone2OBI(wiring.Component):
         return m
 
 class CV32E40P(wiring.Component):
+    """OpenHW Group CV32E40P RISC-V processor core.
+
+    A 32-bit RISC-V CPU core implementing the RV32IMC instruction set with additional
+    PULP extensions. This wrapper provides Wishbone bus interfaces for instruction and
+    data access, converting from the native OBI bus protocol.
+
+    The core is pre-converted from SystemVerilog to Verilog using sv2v and instantiated
+    as a Verilog black box.
+
+    Parameters
+    ----------
+    config : :class:`str`
+        Core configuration. Currently only ``"default"`` is supported.
+    reset_vector : :class:`int`
+        Address where the CPU begins execution after reset. Defaults to ``0x00100000``.
+    dm_haltaddress : :class:`int`
+        Debug module halt address. Defaults to ``0xa0000800``.
+
+    Attributes
+    ----------
+    ibus : :class:`wishbone.Interface`
+        Wishbone instruction bus interface (32-bit, read-only).
+    dbus : :class:`wishbone.Interface`
+        Wishbone data bus interface (32-bit, read/write).
+    timer_irq : :class:`Signal`
+        Timer interrupt input.
+    software_irq : :class:`Signal`
+        Software interrupt input.
+    debug_req : :class:`Signal`
+        Debug request input from debug module.
+    """
+
     def __init__(self, *, config="default", reset_vector=0x00100000, dm_haltaddress=0xa0000800):
         if config not in ("default",):
             raise ValueError(f"Unsupported configuration {config!r}; must be one of: 'default'")
@@ -200,6 +232,36 @@ class CV32E40P(wiring.Component):
         return m
 
 class OBIDebugModule(wiring.Component):
+    """RISC-V Debug Module with JTAG interface.
+
+    Implements the RISC-V Debug Specification, providing JTAG-based debugging capabilities
+    for the CV32E40P core. Includes a system bus master for memory access during debug
+    and a target interface for debug module register access.
+
+    The module is pre-converted from SystemVerilog to Verilog using sv2v.
+
+    Attributes
+    ----------
+    initiator : :class:`wishbone.Interface`
+        Wishbone initiator interface for system bus access during debug.
+    target : :class:`wishbone.Interface`
+        Wishbone target interface for debug module register access.
+    jtag_tms : :class:`Signal`
+        JTAG Test Mode Select input.
+    jtag_tdi : :class:`Signal`
+        JTAG Test Data In input.
+    jtag_tdo : :class:`Signal`
+        JTAG Test Data Out output.
+    jtag_tck : :class:`Signal`
+        JTAG Test Clock input.
+    jtag_trst : :class:`Signal`
+        JTAG Test Reset input (active low).
+    debug_req : :class:`Signal`
+        Debug request output to CPU core.
+    ndmreset : :class:`Signal`
+        Non-debug module reset output.
+    """
+
     def __init__(self):
         self._addr_width=12
 
