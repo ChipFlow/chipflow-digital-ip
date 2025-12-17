@@ -1,5 +1,8 @@
 # PWM Peripheral TOML Binding
 # Demonstrates yosys-slang generator for SystemVerilog to RTLIL conversion
+#
+# This binding defines how the SystemVerilog pwm_peripheral module connects
+# to the Amaranth SoC infrastructure and pad ring IOModels.
 
 name = 'pwm_peripheral'
 
@@ -33,7 +36,8 @@ w_stb = 'i_csr_we_i'
 w_data = 'i_csr_wdata_i'
 r_data = 'o_csr_rdata_o'
 
-# PWM output pins to pad ring
+# PWM output pins to pad ring (active drive with output enable)
+# Uses GPIOSignature for tristate-capable pads
 [pins.pwm]
 interface = 'chipflow.platform.GPIOSignature'
 
@@ -41,15 +45,22 @@ interface = 'chipflow.platform.GPIOSignature'
 width = 4
 
 [pins.pwm.map]
-o = 'o_pwm_o'
-oe = 'o_pwm_oe_o'
+gpio.o = 'o_pwm_o'
+gpio.oe = 'o_pwm_oe_o'
+# Note: gpio.i not mapped - PWM outputs don't read back
 
-# Input capture pins from pad ring
+# Input capture pins from pad ring (input only)
 [pins.capture]
-interface = 'amaranth.lib.wiring.In(4)'
-map = 'i_capture_i'
+interface = 'chipflow.platform.GPIOSignature'
 
-# GPIO pins to pad ring
+[pins.capture.params]
+width = 4
+
+[pins.capture.map]
+gpio.i = 'i_capture_i'
+# Note: gpio.o and gpio.oe not mapped - capture is input only
+
+# GPIO pins to pad ring (full bidirectional)
 [pins.gpio]
 interface = 'chipflow.platform.GPIOSignature'
 
@@ -57,6 +68,11 @@ interface = 'chipflow.platform.GPIOSignature'
 width = 8
 
 [pins.gpio.map]
-i = 'i_gpio_i'
-o = 'o_gpio_o'
-oe = 'o_gpio_oe_o'
+gpio.i = 'i_gpio_i'
+gpio.o = 'o_gpio_o'
+gpio.oe = 'o_gpio_oe_o'
+
+# Software driver configuration (optional)
+[drivers.raw]
+h_files = []
+c_files = []
