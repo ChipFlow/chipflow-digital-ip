@@ -1,4 +1,3 @@
-
 from amaranth import Module, unsigned
 from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, flipped, connect

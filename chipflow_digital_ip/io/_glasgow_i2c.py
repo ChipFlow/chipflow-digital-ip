@@ -1,4 +1,4 @@
-from amaranth import *
+from amaranth import * 
 from amaranth.lib.cdc import FFSynchronizer
 
 
