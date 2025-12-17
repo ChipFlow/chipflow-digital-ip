@@ -6,7 +6,7 @@ modules as Amaranth wiring.Component classes. It supports:
 - Automatic Signature generation from TOML port definitions
 - SpinalHDL code generation
 - SystemVerilog to Verilog conversion via sv2v
-- SystemVerilog to RTLIL conversion via yosys-slang
+- SystemVerilog to Verilog conversion via yosys-slang
 - Clock and reset signal mapping
 - Port and pin interface mapping to Verilog signals
 """
@@ -181,7 +181,11 @@ class GenerateSV2V(BaseModel):
 
 
 class GenerateYosysSlang(BaseModel):
-    """Configuration for SystemVerilog to RTLIL conversion using yosys-slang."""
+    """Configuration for SystemVerilog to Verilog conversion using yosys-slang.
+
+    Uses the yosys-slang plugin to parse SystemVerilog and output plain Verilog
+    that can be used with Amaranth's Instance() mechanism.
+    """
 
     include_dirs: List[str] = []
     defines: Dict[str, str] = {}
@@ -190,16 +194,16 @@ class GenerateYosysSlang(BaseModel):
     def generate(
         self, source_path: Path, dest_path: Path, name: str, parameters: Dict[str, JsonValue]
     ) -> List[Path]:
-        """Convert SystemVerilog files to RTLIL using yosys-slang.
+        """Convert SystemVerilog files to Verilog using yosys-slang.
 
         Args:
             source_path: Path containing SystemVerilog files
-            dest_path: Output directory for RTLIL output
+            dest_path: Output directory for Verilog output
             name: Output file name (without extension)
             parameters: Template parameters (unused for yosys-slang)
 
         Returns:
-            List of generated RTLIL file paths
+            List of generated Verilog file paths
         """
         # Check if yosys is available
         if shutil.which("yosys") is None:
@@ -250,9 +254,9 @@ class GenerateYosysSlang(BaseModel):
         else:
             script_lines.append("hierarchy -check")
 
-        # Output RTLIL
-        output_file = dest_path / f"{name}.il"
-        script_lines.append(f"write_rtlil {output_file}")
+        # Output Verilog (compatible with Amaranth's Instance mechanism)
+        output_file = dest_path / f"{name}.v"
+        script_lines.append(f"write_verilog -noattr {output_file}")
 
         script = "\n".join(script_lines)
 
@@ -389,12 +393,32 @@ def _flatten_port_map(
 
 
 def _get_nested_attr(obj: Any, path: str) -> Any:
-    """Get a nested attribute using dot notation."""
+    """Get a nested attribute using dot notation.
+
+    Args:
+        obj: The root object
+        path: Dot-separated attribute path (e.g., 'gpio.o')
+
+    Returns:
+        The nested attribute value
+
+    Raises:
+        ChipFlowError: If the attribute path doesn't exist
+    """
     if not path:
         return obj
-    for part in path.split("."):
-        obj = getattr(obj, part)
-    return obj
+    current = obj
+    parts = path.split(".")
+    for i, part in enumerate(parts):
+        try:
+            current = getattr(current, part)
+        except AttributeError:
+            traversed = ".".join(parts[:i]) if i > 0 else "(root)"
+            raise ChipFlowError(
+                f"Invalid signal path '{path}': attribute '{part}' not found "
+                f"(traversed: {traversed}, available: {dir(current)})"
+            )
+    return current
 
 
 class VerilogWrapper(wiring.Component):
@@ -467,10 +491,22 @@ class VerilogWrapper(wiring.Component):
             direction = _parse_signal_direction(first_signal)
 
             # Try to instantiate the interface
+            # Handle different interface constructor patterns
+            sig = None
             if hasattr(interface_info, "Signature"):
                 sig = interface_info.Signature(**resolved_params)
             else:
-                sig = interface_info(**resolved_params)
+                # Try keyword args first
+                try:
+                    sig = interface_info(**resolved_params)
+                except TypeError:
+                    # Some interfaces take positional args (e.g., GPIOSignature(width))
+                    # Try passing the first param value as positional
+                    if resolved_params:
+                        first_value = next(iter(resolved_params.values()))
+                        sig = interface_info(first_value)
+                    else:
+                        sig = interface_info()
 
             # Input signals to the Verilog module are outputs from Amaranth's perspective
             # (we provide them), and vice versa
