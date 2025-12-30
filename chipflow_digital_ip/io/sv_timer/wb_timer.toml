@@ -18,30 +18,25 @@ sys = 'clk'
 [resets]
 sys = 'rst_n'
 
-# Bus interface (typically direction = "in" from Amaranth's perspective)
+# Bus interface using auto-mapping
+# The 'prefix' field enables automatic signal name generation for known interfaces.
+# For Wishbone, this generates: i_wb_cyc, i_wb_stb, i_wb_we, i_wb_sel, i_wb_adr,
+#                               i_wb_dat (dat_w), o_wb_dat (dat_r), o_wb_ack
 [ports.bus]
 interface = 'amaranth_soc.wishbone.Signature'
 direction = 'in'
+prefix = 'wb'
 
 [ports.bus.params]
 addr_width = 4
 data_width = 32
 granularity = 8
 
-[ports.bus.map]
-cyc = 'i_wb_cyc'
-stb = 'i_wb_stb'
-we = 'i_wb_we'
-sel = 'i_wb_sel'
-adr = 'i_wb_adr'
-dat_w = 'i_wb_dat'
-dat_r = 'o_wb_dat'
-ack = 'o_wb_ack'
-
-# Pin interfaces (typically direction = "out" - we provide them to IO pads)
+# Pin interfaces using auto-mapping
+# For simple Out(1), auto-generates: o_irq
 [pins.irq]
 interface = 'amaranth.lib.wiring.Out(1)'
-map = 'o_irq'
+prefix = 'irq'
 
 # Software driver configuration for SoftwareDriverSignature
 [driver]

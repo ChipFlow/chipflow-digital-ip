@@ -29,7 +29,12 @@ from amaranth.lib.wiring import In, Out
 from chipflow import ChipFlowError
 
 
-__all__ = ["VerilogWrapper", "load_wrapper_from_toml"]
+__all__ = [
+    "VerilogWrapper",
+    "load_wrapper_from_toml",
+    "_generate_auto_map",
+    "_INTERFACE_REGISTRY",
+]
 
 
 class Files(BaseModel):
@@ -202,7 +207,8 @@ class Port(BaseModel):
     interface: str  # Interface type (e.g., 'amaranth_soc.wishbone.Signature')
     params: Optional[Dict[str, JsonValue]] = None
     vars: Optional[Dict[str, Literal["int"]]] = None
-    map: str | Dict[str, Dict[str, str] | str]
+    map: Optional[str | Dict[str, Dict[str, str] | str]] = None  # Auto-generated if not provided
+    prefix: Optional[str] = None  # Prefix for auto-generated signal names
     direction: Optional[Literal["in", "out"]] = None  # Explicit direction override
 
 
@@ -307,6 +313,192 @@ def _get_nested_attr(obj: Any, path: str) -> Any:
     return obj
 
 
+# =============================================================================
+# Interface Auto-Mapping Registry
+# =============================================================================
+# Defines signal mappings for well-known interfaces. Each entry maps
+# signal paths to (direction, suffix) tuples where:
+# - direction: 'i' for input, 'o' for output
+# - suffix: the Verilog signal suffix to use after the prefix
+
+# Wishbone B4 bus interface signals
+_WISHBONE_SIGNALS: Dict[str, tuple[str, str]] = {
+    "cyc": ("i", "cyc"),
+    "stb": ("i", "stb"),
+    "we": ("i", "we"),
+    "sel": ("i", "sel"),
+    "adr": ("i", "adr"),
+    "dat_w": ("i", "dat"),  # Write data goes into the peripheral
+    "dat_r": ("o", "dat"),  # Read data comes out of the peripheral
+    "ack": ("o", "ack"),
+    # Optional Wishbone signals
+    "err": ("o", "err"),
+    "rty": ("o", "rty"),
+    "stall": ("o", "stall"),
+    "lock": ("i", "lock"),
+    "cti": ("i", "cti"),
+    "bte": ("i", "bte"),
+}
+
+# CSR bus interface signals
+_CSR_SIGNALS: Dict[str, tuple[str, str]] = {
+    "addr": ("i", "addr"),
+    "r_data": ("o", "rdata"),
+    "r_stb": ("i", "rstb"),
+    "w_data": ("i", "wdata"),
+    "w_stb": ("i", "wstb"),
+}
+
+# GPIO interface signals (directly on signature.gpio member)
+_GPIO_SIGNALS: Dict[str, tuple[str, str]] = {
+    "gpio.i": ("i", "i"),
+    "gpio.o": ("o", "o"),
+    "gpio.oe": ("o", "oe"),
+}
+
+# UART interface signals
+_UART_SIGNALS: Dict[str, tuple[str, str]] = {
+    "tx.o": ("o", "tx"),
+    "rx.i": ("i", "rx"),
+}
+
+# I2C interface signals (open-drain, active-low)
+_I2C_SIGNALS: Dict[str, tuple[str, str]] = {
+    "sda.i": ("i", "sda"),
+    "sda.oe": ("o", "sda_oe"),
+    "scl.i": ("i", "scl"),
+    "scl.oe": ("o", "scl_oe"),
+}
+
+# SPI interface signals
+_SPI_SIGNALS: Dict[str, tuple[str, str]] = {
+    "sck.o": ("o", "sck"),
+    "copi.o": ("o", "copi"),  # MOSI
+    "cipo.i": ("i", "cipo"),  # MISO
+    "csn.o": ("o", "csn"),
+}
+
+# QSPI Flash interface signals
+_QSPI_SIGNALS: Dict[str, tuple[str, str]] = {
+    "clk.o": ("o", "clk"),
+    "csn.o": ("o", "csn"),
+    "d.i": ("i", "d"),
+    "d.o": ("o", "d"),
+    "d.oe": ("o", "d_oe"),
+}
+
+# Bidirectional IO signals (generic)
+_BIDIR_IO_SIGNALS: Dict[str, tuple[str, str]] = {
+    "i": ("i", ""),
+    "o": ("o", ""),
+    "oe": ("o", "oe"),
+}
+
+# Output IO signals (generic)
+_OUTPUT_IO_SIGNALS: Dict[str, tuple[str, str]] = {
+    "o": ("o", ""),
+}
+
+# Registry mapping interface type patterns to their signal definitions
+_INTERFACE_REGISTRY: Dict[str, Dict[str, tuple[str, str]]] = {
+    "amaranth_soc.wishbone.Signature": _WISHBONE_SIGNALS,
+    "amaranth_soc.csr.Signature": _CSR_SIGNALS,
+    "chipflow.platform.GPIOSignature": _GPIO_SIGNALS,
+    "chipflow.platform.UARTSignature": _UART_SIGNALS,
+    "chipflow.platform.I2CSignature": _I2C_SIGNALS,
+    "chipflow.platform.SPISignature": _SPI_SIGNALS,
+    "chipflow.platform.QSPIFlashSignature": _QSPI_SIGNALS,
+    "chipflow.platform.BidirIOSignature": _BIDIR_IO_SIGNALS,
+    "chipflow.platform.OutputIOSignature": _OUTPUT_IO_SIGNALS,
+}
+
+
+def _generate_auto_map(
+    interface_str: str, prefix: str, port_direction: str = "in"
+) -> Dict[str, str]:
+    """Generate automatic port mapping for a well-known interface.
+
+    Args:
+        interface_str: Interface type string (e.g., 'amaranth_soc.wishbone.Signature')
+        prefix: Prefix for signal names (e.g., 'wb' -> 'i_wb_cyc', 'o_wb_ack')
+        port_direction: Direction of the port ('in' or 'out'), affects signal directions
+
+    Returns:
+        Dictionary mapping interface signal paths to Verilog signal names
+
+    Raises:
+        ChipFlowError: If interface is not in the registry
+    """
+    # Handle simple Out/In expressions like "amaranth.lib.wiring.Out(1)"
+    out_match = re.match(r"amaranth\.lib\.wiring\.(Out|In)\((\d+)\)", interface_str)
+    if out_match:
+        direction, _width = out_match.groups()
+        # For simple signals, the direction prefix depends on the interface direction
+        if direction == "Out":
+            return {"": f"o_{prefix}"}
+        else:
+            return {"": f"i_{prefix}"}
+
+    # Look up in registry
+    if interface_str not in _INTERFACE_REGISTRY:
+        raise ChipFlowError(
+            f"No auto-mapping available for interface '{interface_str}'. "
+            f"Please provide an explicit 'map' in the TOML configuration. "
+            f"Known interfaces: {', '.join(_INTERFACE_REGISTRY.keys())}"
+        )
+
+    signal_defs = _INTERFACE_REGISTRY[interface_str]
+    result = {}
+
+    for signal_path, (sig_direction, suffix) in signal_defs.items():
+        # For ports with direction="out" (from Amaranth's perspective),
+        # we flip the signal directions because we're providing signals TO the interface
+        if port_direction == "out":
+            actual_dir = "o" if sig_direction == "i" else "i"
+        else:
+            actual_dir = sig_direction
+
+        # Build the Verilog signal name
+        if suffix:
+            verilog_name = f"{actual_dir}_{prefix}_{suffix}"
+        else:
+            verilog_name = f"{actual_dir}_{prefix}"
+
+        result[signal_path] = verilog_name
+
+    return result
+
+
+def _infer_prefix_from_port_name(port_name: str, interface_str: str) -> str:
+    """Infer a reasonable prefix from the port name and interface type.
+
+    Args:
+        port_name: Name of the port (e.g., 'bus', 'uart', 'i2c_pins')
+        interface_str: Interface type string
+
+    Returns:
+        Suggested prefix for signal names
+    """
+    # Use the port name directly as the prefix
+    # But apply some common transformations
+    name = port_name.lower()
+
+    # Remove common suffixes
+    for suffix in ("_pins", "_bus", "_port", "_interface"):
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+            break
+
+    # Map some interface types to common prefixes if port name is generic
+    if name in ("bus", "port"):
+        if "wishbone" in interface_str.lower():
+            return "wb"
+        elif "csr" in interface_str.lower():
+            return "csr"
+
+    return name
+
+
 class VerilogWrapper(wiring.Component):
     """Dynamic Amaranth Component that wraps an external Verilog module.
 
@@ -333,15 +525,21 @@ class VerilogWrapper(wiring.Component):
 
         # Process ports (bus interfaces like Wishbone) - typically direction="in"
         for port_name, port_config in config.ports.items():
-            sig_member = self._create_signature_member(port_config, config, default_direction="in")
+            default_dir = "in"
+            sig_member = self._create_signature_member(port_config, config, default_direction=default_dir)
             signature_members[port_name] = sig_member
-            self._port_mappings[port_name] = _flatten_port_map(port_config.map)
+            self._port_mappings[port_name] = self._get_port_mapping(
+                port_name, port_config, port_config.direction or default_dir
+            )
 
         # Process pins (I/O interfaces to pads) - typically direction="out"
         for pin_name, pin_config in config.pins.items():
-            sig_member = self._create_signature_member(pin_config, config, default_direction="out")
+            default_dir = "out"
+            sig_member = self._create_signature_member(pin_config, config, default_direction=default_dir)
             signature_members[pin_name] = sig_member
-            self._port_mappings[pin_name] = _flatten_port_map(pin_config.map)
+            self._port_mappings[pin_name] = self._get_port_mapping(
+                pin_name, pin_config, pin_config.direction or default_dir
+            )
 
         # Use SoftwareDriverSignature if driver config is provided
         if config.driver:
@@ -362,6 +560,30 @@ class VerilogWrapper(wiring.Component):
                 super().__init__(signature_members)
         else:
             super().__init__(signature_members)
+
+    def _get_port_mapping(
+        self, port_name: str, port_config: Port, direction: str
+    ) -> Dict[str, str]:
+        """Get port mapping, auto-generating if not explicitly provided.
+
+        Args:
+            port_name: Name of the port
+            port_config: Port configuration from TOML
+            direction: Direction of the port ('in' or 'out')
+
+        Returns:
+            Flattened port mapping dictionary
+        """
+        if port_config.map is not None:
+            # Explicit mapping provided
+            return _flatten_port_map(port_config.map)
+
+        # Auto-generate mapping
+        prefix = port_config.prefix
+        if prefix is None:
+            prefix = _infer_prefix_from_port_name(port_name, port_config.interface)
+
+        return _generate_auto_map(port_config.interface, prefix, direction)
 
     def _create_signature_member(
         self, port_config: Port, config: ExternalWrapConfig, default_direction: str = "in"

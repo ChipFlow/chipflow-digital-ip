@@ -21,6 +21,9 @@ from chipflow_digital_ip.io._verilog_wrapper import (
     Port,
     VerilogWrapper,
     _flatten_port_map,
+    _generate_auto_map,
+    _infer_prefix_from_port_name,
+    _INTERFACE_REGISTRY,
     _parse_signal_direction,
     _resolve_interface_type,
     load_wrapper_from_toml,
@@ -405,6 +408,146 @@ h_files = ['drivers/my_driver.h']
             self.assertEqual(config.driver.regs_struct, "my_regs_t")
             self.assertEqual(config.driver.c_files, ["drivers/my_driver.c"])
             self.assertEqual(config.driver.h_files, ["drivers/my_driver.h"])
+        finally:
+            toml_path.unlink()
+
+
+class AutoMappingTestCase(unittest.TestCase):
+    def test_interface_registry_has_known_interfaces(self):
+        """Verify the interface registry contains expected entries."""
+        self.assertIn("amaranth_soc.wishbone.Signature", _INTERFACE_REGISTRY)
+        self.assertIn("amaranth_soc.csr.Signature", _INTERFACE_REGISTRY)
+        self.assertIn("chipflow.platform.GPIOSignature", _INTERFACE_REGISTRY)
+        self.assertIn("chipflow.platform.UARTSignature", _INTERFACE_REGISTRY)
+        self.assertIn("chipflow.platform.I2CSignature", _INTERFACE_REGISTRY)
+        self.assertIn("chipflow.platform.SPISignature", _INTERFACE_REGISTRY)
+
+    def test_generate_auto_map_wishbone(self):
+        """Test auto-mapping for Wishbone interface."""
+        result = _generate_auto_map("amaranth_soc.wishbone.Signature", "wb", "in")
+        self.assertEqual(result["cyc"], "i_wb_cyc")
+        self.assertEqual(result["stb"], "i_wb_stb")
+        self.assertEqual(result["we"], "i_wb_we")
+        self.assertEqual(result["ack"], "o_wb_ack")
+        self.assertEqual(result["dat_w"], "i_wb_dat")
+        self.assertEqual(result["dat_r"], "o_wb_dat")
+
+    def test_generate_auto_map_simple_out(self):
+        """Test auto-mapping for simple Out(1) interface."""
+        result = _generate_auto_map("amaranth.lib.wiring.Out(1)", "irq", "out")
+        self.assertEqual(result[""], "o_irq")
+
+    def test_generate_auto_map_simple_in(self):
+        """Test auto-mapping for simple In(1) interface."""
+        result = _generate_auto_map("amaranth.lib.wiring.In(8)", "data", "in")
+        self.assertEqual(result[""], "i_data")
+
+    def test_generate_auto_map_uart(self):
+        """Test auto-mapping for UART interface."""
+        result = _generate_auto_map("chipflow.platform.UARTSignature", "uart", "out")
+        # Direction is flipped because port direction is 'out'
+        self.assertEqual(result["tx.o"], "i_uart_tx")  # We receive tx from the peripheral
+        self.assertEqual(result["rx.i"], "o_uart_rx")  # We send rx to the peripheral
+
+    def test_generate_auto_map_unknown_interface(self):
+        """Test that unknown interfaces raise an error."""
+        with self.assertRaises(ChipFlowError) as ctx:
+            _generate_auto_map("unknown.interface.Type", "prefix", "in")
+        self.assertIn("No auto-mapping available", str(ctx.exception))
+
+    def test_infer_prefix_from_port_name(self):
+        """Test prefix inference from port names."""
+        self.assertEqual(_infer_prefix_from_port_name("bus", "amaranth_soc.wishbone.Signature"), "wb")
+        self.assertEqual(_infer_prefix_from_port_name("bus", "amaranth_soc.csr.Signature"), "csr")
+        self.assertEqual(_infer_prefix_from_port_name("uart_pins", "chipflow.platform.UARTSignature"), "uart")
+        self.assertEqual(_infer_prefix_from_port_name("i2c", "chipflow.platform.I2CSignature"), "i2c")
+
+    def test_port_with_auto_map(self):
+        """Test Port configuration without explicit map."""
+        port = Port(
+            interface='amaranth_soc.wishbone.Signature',
+            prefix='wb',
+        )
+        self.assertIsNone(port.map)
+        self.assertEqual(port.prefix, 'wb')
+
+    def test_port_with_explicit_map_and_prefix(self):
+        """Test Port configuration with both map and prefix (map takes precedence)."""
+        port = Port(
+            interface='amaranth.lib.wiring.Out(1)',
+            map='o_custom_signal',
+            prefix='ignored',
+        )
+        self.assertEqual(port.map, 'o_custom_signal')
+        self.assertEqual(port.prefix, 'ignored')
+
+    def test_config_with_auto_mapped_ports(self):
+        """Test ExternalWrapConfig with auto-mapped ports."""
+        config = ExternalWrapConfig(
+            name="AutoMapTest",
+            files=Files(path=Path("/tmp")),
+            ports={
+                "bus": Port(
+                    interface="amaranth_soc.wishbone.Signature",
+                    prefix="wb",
+                    params={"addr_width": 4, "data_width": 32, "granularity": 8}
+                )
+            },
+            pins={
+                "irq": Port(
+                    interface="amaranth.lib.wiring.Out(1)",
+                    prefix="irq"
+                )
+            },
+            clocks={"sys": "clk"},
+            resets={"sys": "rst_n"},
+        )
+        self.assertEqual(config.name, "AutoMapTest")
+        self.assertIsNone(config.ports["bus"].map)
+        self.assertEqual(config.ports["bus"].prefix, "wb")
+
+    def test_load_toml_with_auto_map(self):
+        """Test loading TOML with auto-mapped port."""
+        toml_content = """
+name = 'AutoMapTomlTest'
+
+[files]
+path = '/tmp'
+
+[clocks]
+sys = 'clk'
+
+[resets]
+sys = 'rst_n'
+
+[ports.bus]
+interface = 'amaranth_soc.wishbone.Signature'
+prefix = 'wb'
+direction = 'in'
+
+[ports.bus.params]
+addr_width = 4
+data_width = 32
+granularity = 8
+
+[pins.irq]
+interface = 'amaranth.lib.wiring.Out(1)'
+prefix = 'irq'
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
+            f.write(toml_content)
+            toml_path = Path(f.name)
+
+        try:
+            import tomli
+            with open(toml_path, 'rb') as f:
+                raw = tomli.load(f)
+            config = ExternalWrapConfig.model_validate(raw)
+            self.assertEqual(config.name, "AutoMapTomlTest")
+            self.assertIsNone(config.ports["bus"].map)
+            self.assertEqual(config.ports["bus"].prefix, "wb")
+            self.assertIsNone(config.pins["irq"].map)
+            self.assertEqual(config.pins["irq"].prefix, "irq")
         finally:
             toml_path.unlink()
 
