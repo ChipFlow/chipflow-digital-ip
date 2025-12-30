@@ -199,10 +199,19 @@ class Generate(BaseModel):
 class Port(BaseModel):
     """Port interface mapping configuration."""
 
-    interface: str  # Interface type (e.g., 'amaranth_soc.wishbone.Interface')
+    interface: str  # Interface type (e.g., 'amaranth_soc.wishbone.Signature')
     params: Optional[Dict[str, JsonValue]] = None
     vars: Optional[Dict[str, Literal["int"]]] = None
     map: str | Dict[str, Dict[str, str] | str]
+    direction: Optional[Literal["in", "out"]] = None  # Explicit direction override
+
+
+class DriverConfig(BaseModel):
+    """Software driver configuration for SoftwareDriverSignature."""
+
+    regs_struct: Optional[str] = None
+    c_files: List[str] = []
+    h_files: List[str] = []
 
 
 class ExternalWrapConfig(BaseModel):
@@ -215,7 +224,7 @@ class ExternalWrapConfig(BaseModel):
     resets: Dict[str, str] = {}
     ports: Dict[str, Port] = {}
     pins: Dict[str, Port] = {}
-    drivers: Optional[Dict[str, Any]] = None
+    driver: Optional[DriverConfig] = None
 
 
 def _resolve_interface_type(interface_str: str) -> type | tuple:
@@ -303,6 +312,9 @@ class VerilogWrapper(wiring.Component):
 
     This component is generated from TOML configuration and creates the appropriate
     Signature and elaborate() implementation to instantiate the Verilog module.
+
+    When a driver configuration is provided, the component uses SoftwareDriverSignature
+    to enable automatic driver generation and register struct creation.
     """
 
     def __init__(self, config: ExternalWrapConfig, verilog_files: List[Path] | None = None):
@@ -319,28 +331,55 @@ class VerilogWrapper(wiring.Component):
         # Build signature from ports and pins
         signature_members = {}
 
-        # Process ports (bus interfaces like Wishbone)
+        # Process ports (bus interfaces like Wishbone) - typically direction="in"
         for port_name, port_config in config.ports.items():
-            sig_member = self._create_signature_member(port_config, config)
+            sig_member = self._create_signature_member(port_config, config, default_direction="in")
             signature_members[port_name] = sig_member
             self._port_mappings[port_name] = _flatten_port_map(port_config.map)
 
-        # Process pins (I/O interfaces)
+        # Process pins (I/O interfaces to pads) - typically direction="out"
         for pin_name, pin_config in config.pins.items():
-            sig_member = self._create_signature_member(pin_config, config)
+            sig_member = self._create_signature_member(pin_config, config, default_direction="out")
             signature_members[pin_name] = sig_member
             self._port_mappings[pin_name] = _flatten_port_map(pin_config.map)
 
-        super().__init__(signature_members)
+        # Use SoftwareDriverSignature if driver config is provided
+        if config.driver:
+            try:
+                from chipflow.platform import SoftwareDriverSignature
+
+                super().__init__(
+                    SoftwareDriverSignature(
+                        members=signature_members,
+                        component=self,
+                        regs_struct=config.driver.regs_struct,
+                        c_files=config.driver.c_files,
+                        h_files=config.driver.h_files,
+                    )
+                )
+            except ImportError:
+                # Fallback if chipflow.platform not available
+                super().__init__(signature_members)
+        else:
+            super().__init__(signature_members)
 
     def _create_signature_member(
-        self, port_config: Port, config: ExternalWrapConfig
+        self, port_config: Port, config: ExternalWrapConfig, default_direction: str = "in"
     ) -> In | Out:
-        """Create a signature member from port configuration."""
+        """Create a signature member from port configuration.
+
+        Args:
+            port_config: Port configuration from TOML
+            config: Full wrapper configuration
+            default_direction: Default direction if not specified ('in' or 'out')
+
+        Returns:
+            In or Out wrapped signature member
+        """
         interface_info = _resolve_interface_type(port_config.interface)
 
         if isinstance(interface_info, tuple):
-            # Simple Out/In(width)
+            # Simple Out/In(width) - direction already specified in interface string
             direction, width = interface_info
             if direction == "Out":
                 return Out(width)
@@ -362,23 +401,24 @@ class VerilogWrapper(wiring.Component):
                 resolved_params[k] = v
 
         try:
-            # Determine direction based on signal mapping
-            port_map = _flatten_port_map(port_config.map)
-            first_signal = next(iter(port_map.values()), "")
-            direction = _parse_signal_direction(first_signal)
-
-            # Try to instantiate the interface
+            # Try to instantiate the interface/signature
             if hasattr(interface_info, "Signature"):
                 sig = interface_info.Signature(**resolved_params)
             else:
                 sig = interface_info(**resolved_params)
 
-            # Input signals to the Verilog module are outputs from Amaranth's perspective
-            # (we provide them), and vice versa
-            if direction == "i":
-                return Out(sig)
+            # Determine direction:
+            # 1. Explicit direction in TOML takes precedence
+            # 2. Otherwise use default_direction (ports="in", pins="out")
+            if port_config.direction:
+                direction = port_config.direction
             else:
+                direction = default_direction
+
+            if direction == "in":
                 return In(sig)
+            else:
+                return Out(sig)
         except Exception as e:
             raise ChipFlowError(
                 f"Could not create interface '{port_config.interface}' "
