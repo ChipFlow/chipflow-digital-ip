@@ -33,7 +33,10 @@ __all__ = [
     "VerilogWrapper",
     "load_wrapper_from_toml",
     "_generate_auto_map",
-    "_INTERFACE_REGISTRY",
+    "_infer_auto_map",
+    "_parse_verilog_ports",
+    "_INTERFACE_PATTERNS",
+    "_INTERFACE_REGISTRY",  # Backwards compat alias
 ]
 
 
@@ -314,189 +317,299 @@ def _get_nested_attr(obj: Any, path: str) -> Any:
 
 
 # =============================================================================
-# Interface Auto-Mapping Registry
+# Interface Auto-Mapping from Verilog Signal Names
 # =============================================================================
-# Defines signal mappings for well-known interfaces. Each entry maps
-# signal paths to (direction, suffix) tuples where:
-# - direction: 'i' for input, 'o' for output
-# - suffix: the Verilog signal suffix to use after the prefix
+# Auto-mapping works by parsing the Verilog module to find its actual port names,
+# then matching patterns to identify which signals correspond to interface members.
+# This adapts to whatever naming convention the Verilog code uses.
 
-# Wishbone B4 bus interface signals
-_WISHBONE_SIGNALS: Dict[str, tuple[str, str]] = {
-    "cyc": ("i", "cyc"),
-    "stb": ("i", "stb"),
-    "we": ("i", "we"),
-    "sel": ("i", "sel"),
-    "adr": ("i", "adr"),
-    "dat_w": ("i", "dat"),  # Write data goes into the peripheral
-    "dat_r": ("o", "dat"),  # Read data comes out of the peripheral
-    "ack": ("o", "ack"),
+# Pattern definitions for each interface type.
+# Each pattern is a tuple of (regex_pattern, interface_member_path, expected_direction)
+# The regex should match common naming conventions for that signal.
+
+_WISHBONE_PATTERNS: List[tuple[str, str, str]] = [
+    # Core Wishbone signals - match various naming styles
+    (r"(?:^|_)(cyc)(?:_|$)", "cyc", "i"),       # wb_cyc, cyc_i, i_wb_cyc
+    (r"(?:^|_)(stb)(?:_|$)", "stb", "i"),       # wb_stb, stb_i, i_wb_stb
+    (r"(?:^|_)(we)(?:_|$)", "we", "i"),         # wb_we, we_i, i_wb_we
+    (r"(?:^|_)(sel)(?:_|$)", "sel", "i"),       # wb_sel, sel_i, i_wb_sel
+    (r"(?:^|_)(adr|addr)(?:_|$)", "adr", "i"),  # wb_adr, addr_i, i_wb_adr
+    (r"(?:^|_)(ack)(?:_|$)", "ack", "o"),       # wb_ack, ack_o, o_wb_ack
+    # Data signals - need to distinguish read vs write
+    (r"(?:^|_)dat(?:a)?_?w(?:r(?:ite)?)?(?:_|$)", "dat_w", "i"),  # dat_w, data_wr, wdata
+    (r"(?:^|_)w(?:r(?:ite)?)?_?dat(?:a)?(?:_|$)", "dat_w", "i"),  # wdat, write_data
+    (r"(?:^|_)dat(?:a)?_?r(?:d|ead)?(?:_|$)", "dat_r", "o"),      # dat_r, data_rd, rdata
+    (r"(?:^|_)r(?:d|ead)?_?dat(?:a)?(?:_|$)", "dat_r", "o"),      # rdat, read_data
+    # Fallback for generic dat - use direction to disambiguate
+    (r"(?:^|_)(dat|data)(?:_|$)", "dat_w", "i"),  # Input data = write
+    (r"(?:^|_)(dat|data)(?:_|$)", "dat_r", "o"),  # Output data = read
     # Optional Wishbone signals
-    "err": ("o", "err"),
-    "rty": ("o", "rty"),
-    "stall": ("o", "stall"),
-    "lock": ("i", "lock"),
-    "cti": ("i", "cti"),
-    "bte": ("i", "bte"),
+    (r"(?:^|_)(err)(?:_|$)", "err", "o"),
+    (r"(?:^|_)(rty)(?:_|$)", "rty", "o"),
+    (r"(?:^|_)(stall)(?:_|$)", "stall", "o"),
+    (r"(?:^|_)(lock)(?:_|$)", "lock", "i"),
+    (r"(?:^|_)(cti)(?:_|$)", "cti", "i"),
+    (r"(?:^|_)(bte)(?:_|$)", "bte", "i"),
+]
+
+_CSR_PATTERNS: List[tuple[str, str, str]] = [
+    (r"(?:^|_)(addr|adr)(?:_|$)", "addr", "i"),
+    (r"(?:^|_)r(?:ead)?_?data(?:_|$)", "r_data", "o"),
+    (r"(?:^|_)r(?:ead)?_?stb(?:_|$)", "r_stb", "i"),
+    (r"(?:^|_)w(?:rite)?_?data(?:_|$)", "w_data", "i"),
+    (r"(?:^|_)w(?:rite)?_?stb(?:_|$)", "w_stb", "i"),
+]
+
+_UART_PATTERNS: List[tuple[str, str, str]] = [
+    (r"(?:^|_)(tx|txd)(?:_|$)", "tx.o", "o"),
+    (r"(?:^|_)(rx|rxd)(?:_|$)", "rx.i", "i"),
+]
+
+_I2C_PATTERNS: List[tuple[str, str, str]] = [
+    (r"(?:^|_)sda(?:_i|_in)?(?:_|$)", "sda.i", "i"),
+    (r"(?:^|_)sda(?:_o|_out|_oe)(?:_|$)", "sda.oe", "o"),
+    (r"(?:^|_)scl(?:_i|_in)?(?:_|$)", "scl.i", "i"),
+    (r"(?:^|_)scl(?:_o|_out|_oe)(?:_|$)", "scl.oe", "o"),
+]
+
+_SPI_PATTERNS: List[tuple[str, str, str]] = [
+    (r"(?:^|_)(sck|sclk|clk)(?:_|$)", "sck.o", "o"),
+    (r"(?:^|_)(mosi|copi|sdo)(?:_|$)", "copi.o", "o"),
+    (r"(?:^|_)(miso|cipo|sdi)(?:_|$)", "cipo.i", "i"),
+    (r"(?:^|_)(cs|csn|ss|ssn)(?:_|$)", "csn.o", "o"),
+]
+
+_GPIO_PATTERNS: List[tuple[str, str, str]] = [
+    (r"(?:^|_)gpio(?:_i|_in)(?:_|$)", "gpio.i", "i"),
+    (r"(?:^|_)gpio(?:_o|_out)(?:_|$)", "gpio.o", "o"),
+    (r"(?:^|_)gpio(?:_oe|_en)(?:_|$)", "gpio.oe", "o"),
+]
+
+# Registry mapping interface types to their pattern lists
+_INTERFACE_PATTERNS: Dict[str, List[tuple[str, str, str]]] = {
+    "amaranth_soc.wishbone.Signature": _WISHBONE_PATTERNS,
+    "amaranth_soc.csr.Signature": _CSR_PATTERNS,
+    "chipflow.platform.GPIOSignature": _GPIO_PATTERNS,
+    "chipflow.platform.UARTSignature": _UART_PATTERNS,
+    "chipflow.platform.I2CSignature": _I2C_PATTERNS,
+    "chipflow.platform.SPISignature": _SPI_PATTERNS,
 }
 
-# CSR bus interface signals
-_CSR_SIGNALS: Dict[str, tuple[str, str]] = {
-    "addr": ("i", "addr"),
-    "r_data": ("o", "rdata"),
-    "r_stb": ("i", "rstb"),
-    "w_data": ("i", "wdata"),
-    "w_stb": ("i", "wstb"),
-}
+# For backwards compatibility
+_INTERFACE_REGISTRY = _INTERFACE_PATTERNS
 
-# GPIO interface signals (directly on signature.gpio member)
-_GPIO_SIGNALS: Dict[str, tuple[str, str]] = {
-    "gpio.i": ("i", "i"),
-    "gpio.o": ("o", "o"),
-    "gpio.oe": ("o", "oe"),
-}
 
-# UART interface signals
-_UART_SIGNALS: Dict[str, tuple[str, str]] = {
-    "tx.o": ("o", "tx"),
-    "rx.i": ("i", "rx"),
-}
+def _parse_verilog_ports(verilog_content: str, module_name: str) -> Dict[str, str]:
+    """Parse Verilog/SystemVerilog to extract module port names and directions.
 
-# I2C interface signals (open-drain, active-low)
-_I2C_SIGNALS: Dict[str, tuple[str, str]] = {
-    "sda.i": ("i", "sda"),
-    "sda.oe": ("o", "sda_oe"),
-    "scl.i": ("i", "scl"),
-    "scl.oe": ("o", "scl_oe"),
-}
+    Args:
+        verilog_content: The Verilog source code
+        module_name: Name of the module to parse
 
-# SPI interface signals
-_SPI_SIGNALS: Dict[str, tuple[str, str]] = {
-    "sck.o": ("o", "sck"),
-    "copi.o": ("o", "copi"),  # MOSI
-    "cipo.i": ("i", "cipo"),  # MISO
-    "csn.o": ("o", "csn"),
-}
+    Returns:
+        Dictionary mapping port names to directions ('input', 'output', 'inout')
+    """
+    ports: Dict[str, str] = {}
 
-# QSPI Flash interface signals
-_QSPI_SIGNALS: Dict[str, tuple[str, str]] = {
-    "clk.o": ("o", "clk"),
-    "csn.o": ("o", "csn"),
-    "d.i": ("i", "d"),
-    "d.o": ("o", "d"),
-    "d.oe": ("o", "d_oe"),
-}
+    # Find the module definition
+    # Match both Verilog and SystemVerilog module syntax
+    module_pattern = rf"module\s+{re.escape(module_name)}\s*(?:#\s*\([^)]*\))?\s*\(([^;]*)\)\s*;"
+    module_match = re.search(module_pattern, verilog_content, re.DOTALL | re.IGNORECASE)
 
-# Bidirectional IO signals (generic)
-_BIDIR_IO_SIGNALS: Dict[str, tuple[str, str]] = {
-    "i": ("i", ""),
-    "o": ("o", ""),
-    "oe": ("o", "oe"),
-}
+    if not module_match:
+        # Try ANSI-style port declarations
+        ansi_pattern = rf"module\s+{re.escape(module_name)}\s*(?:#\s*\([^)]*\))?\s*\("
+        ansi_match = re.search(ansi_pattern, verilog_content, re.IGNORECASE)
+        if ansi_match:
+            # Find matching parenthesis
+            start = ansi_match.end()
+            depth = 1
+            end = start
+            while depth > 0 and end < len(verilog_content):
+                if verilog_content[end] == "(":
+                    depth += 1
+                elif verilog_content[end] == ")":
+                    depth -= 1
+                end += 1
+            port_section = verilog_content[start : end - 1]
+        else:
+            return ports
+    else:
+        port_section = module_match.group(1)
 
-# Output IO signals (generic)
-_OUTPUT_IO_SIGNALS: Dict[str, tuple[str, str]] = {
-    "o": ("o", ""),
-}
+    # Parse ANSI-style port declarations (input/output in port list)
+    # Matches: input logic [31:0] signal_name
+    ansi_port_pattern = r"(input|output|inout)\s+(?:logic|wire|reg)?\s*(?:\[[^\]]*\])?\s*(\w+)"
+    for match in re.finditer(ansi_port_pattern, port_section, re.IGNORECASE):
+        direction, name = match.groups()
+        ports[name] = direction.lower()
 
-# Registry mapping interface type patterns to their signal definitions
-_INTERFACE_REGISTRY: Dict[str, Dict[str, tuple[str, str]]] = {
-    "amaranth_soc.wishbone.Signature": _WISHBONE_SIGNALS,
-    "amaranth_soc.csr.Signature": _CSR_SIGNALS,
-    "chipflow.platform.GPIOSignature": _GPIO_SIGNALS,
-    "chipflow.platform.UARTSignature": _UART_SIGNALS,
-    "chipflow.platform.I2CSignature": _I2C_SIGNALS,
-    "chipflow.platform.SPISignature": _SPI_SIGNALS,
-    "chipflow.platform.QSPIFlashSignature": _QSPI_SIGNALS,
-    "chipflow.platform.BidirIOSignature": _BIDIR_IO_SIGNALS,
-    "chipflow.platform.OutputIOSignature": _OUTPUT_IO_SIGNALS,
-}
+    # Also look for non-ANSI declarations after the module header
+    # Find the module body
+    module_body_start = verilog_content.find(";", module_match.end() if module_match else 0)
+    if module_body_start != -1:
+        # Look for standalone input/output declarations
+        body_pattern = r"^\s*(input|output|inout)\s+(?:logic|wire|reg)?\s*(?:\[[^\]]*\])?\s*(\w+)"
+        for match in re.finditer(
+            body_pattern, verilog_content[module_body_start:], re.MULTILINE | re.IGNORECASE
+        ):
+            direction, name = match.groups()
+            if name not in ports:
+                ports[name] = direction.lower()
+
+    return ports
+
+
+def _infer_signal_direction(signal_name: str) -> str:
+    """Infer signal direction from common naming conventions.
+
+    Args:
+        signal_name: Verilog signal name
+
+    Returns:
+        'i' for input, 'o' for output, 'io' for unknown/bidirectional
+    """
+    name_lower = signal_name.lower()
+
+    # Check prefixes
+    if name_lower.startswith("i_") or name_lower.startswith("in_"):
+        return "i"
+    if name_lower.startswith("o_") or name_lower.startswith("out_"):
+        return "o"
+
+    # Check suffixes
+    if name_lower.endswith("_i") or name_lower.endswith("_in"):
+        return "i"
+    if name_lower.endswith("_o") or name_lower.endswith("_out"):
+        return "o"
+    if name_lower.endswith("_oe") or name_lower.endswith("_en"):
+        return "o"
+
+    return "io"  # Unknown
+
+
+def _infer_auto_map(
+    interface_str: str,
+    verilog_ports: Dict[str, str],
+    port_direction: str = "in",
+) -> Dict[str, str]:
+    """Infer port mapping by matching Verilog signals to interface patterns.
+
+    Args:
+        interface_str: Interface type string (e.g., 'amaranth_soc.wishbone.Signature')
+        verilog_ports: Dictionary of Verilog port names to their directions
+        port_direction: Direction of the port ('in' or 'out')
+
+    Returns:
+        Dictionary mapping interface signal paths to matched Verilog signal names
+
+    Raises:
+        ChipFlowError: If interface is not in the registry or required signals not found
+    """
+    # Handle simple Out/In expressions
+    out_match = re.match(r"amaranth\.lib\.wiring\.(Out|In)\((\d+)\)", interface_str)
+    if out_match:
+        # For simple signals, we can't auto-infer - need explicit mapping
+        raise ChipFlowError(
+            f"Cannot auto-infer mapping for simple signal '{interface_str}'. "
+            "Please provide an explicit 'map' in the TOML configuration."
+        )
+
+    if interface_str not in _INTERFACE_PATTERNS:
+        raise ChipFlowError(
+            f"No auto-mapping patterns available for interface '{interface_str}'. "
+            f"Please provide an explicit 'map' in the TOML configuration. "
+            f"Known interfaces: {', '.join(_INTERFACE_PATTERNS.keys())}"
+        )
+
+    patterns = _INTERFACE_PATTERNS[interface_str]
+    result: Dict[str, str] = {}
+    used_ports: set[str] = set()
+
+    for pattern, member_path, expected_dir in patterns:
+        if member_path in result:
+            continue  # Already matched
+
+        for port_name, port_dir in verilog_ports.items():
+            if port_name in used_ports:
+                continue
+
+            # Check if the port name matches the pattern
+            if not re.search(pattern, port_name, re.IGNORECASE):
+                continue
+
+            # Infer direction from port name if not explicitly declared
+            inferred_dir = _infer_signal_direction(port_name)
+            actual_dir = "i" if port_dir == "input" else ("o" if port_dir == "output" else inferred_dir)
+
+            # For ports with direction="out", we flip expectations
+            if port_direction == "out":
+                check_dir = "o" if expected_dir == "i" else "i"
+            else:
+                check_dir = expected_dir
+
+            # Match if directions align (or if we couldn't determine)
+            if actual_dir == "io" or actual_dir == check_dir:
+                result[member_path] = port_name
+                used_ports.add(port_name)
+                break
+
+    return result
 
 
 def _generate_auto_map(
     interface_str: str, prefix: str, port_direction: str = "in"
 ) -> Dict[str, str]:
-    """Generate automatic port mapping for a well-known interface.
+    """Generate automatic port mapping for a well-known interface using prefix convention.
+
+    This is a fallback when Verilog ports aren't available for inference.
+    Generates signal names like i_wb_cyc, o_wb_ack based on the prefix.
 
     Args:
-        interface_str: Interface type string (e.g., 'amaranth_soc.wishbone.Signature')
-        prefix: Prefix for signal names (e.g., 'wb' -> 'i_wb_cyc', 'o_wb_ack')
-        port_direction: Direction of the port ('in' or 'out'), affects signal directions
+        interface_str: Interface type string
+        prefix: Prefix for signal names (e.g., 'wb')
+        port_direction: Direction of the port ('in' or 'out')
 
     Returns:
         Dictionary mapping interface signal paths to Verilog signal names
-
-    Raises:
-        ChipFlowError: If interface is not in the registry
     """
-    # Handle simple Out/In expressions like "amaranth.lib.wiring.Out(1)"
+    # Handle simple Out/In expressions
     out_match = re.match(r"amaranth\.lib\.wiring\.(Out|In)\((\d+)\)", interface_str)
     if out_match:
         direction, _width = out_match.groups()
-        # For simple signals, the direction prefix depends on the interface direction
         if direction == "Out":
             return {"": f"o_{prefix}"}
         else:
             return {"": f"i_{prefix}"}
 
-    # Look up in registry
-    if interface_str not in _INTERFACE_REGISTRY:
+    if interface_str not in _INTERFACE_PATTERNS:
         raise ChipFlowError(
             f"No auto-mapping available for interface '{interface_str}'. "
-            f"Please provide an explicit 'map' in the TOML configuration. "
-            f"Known interfaces: {', '.join(_INTERFACE_REGISTRY.keys())}"
+            f"Please provide an explicit 'map' in the TOML configuration."
         )
 
-    signal_defs = _INTERFACE_REGISTRY[interface_str]
-    result = {}
+    # Build map from patterns - use the matched group as suffix
+    patterns = _INTERFACE_PATTERNS[interface_str]
+    result: Dict[str, str] = {}
+    seen_members: set[str] = set()
 
-    for signal_path, (sig_direction, suffix) in signal_defs.items():
-        # For ports with direction="out" (from Amaranth's perspective),
-        # we flip the signal directions because we're providing signals TO the interface
+    for pattern, member_path, expected_dir in patterns:
+        if member_path in seen_members:
+            continue
+        seen_members.add(member_path)
+
+        # Determine actual direction
         if port_direction == "out":
-            actual_dir = "o" if sig_direction == "i" else "i"
+            actual_dir = "o" if expected_dir == "i" else "i"
         else:
-            actual_dir = sig_direction
+            actual_dir = expected_dir
 
-        # Build the Verilog signal name
-        if suffix:
-            verilog_name = f"{actual_dir}_{prefix}_{suffix}"
-        else:
-            verilog_name = f"{actual_dir}_{prefix}"
+        # Extract a reasonable suffix from the member path
+        suffix = member_path.replace(".", "_")
 
-        result[signal_path] = verilog_name
+        result[member_path] = f"{actual_dir}_{prefix}_{suffix}"
 
     return result
-
-
-def _infer_prefix_from_port_name(port_name: str, interface_str: str) -> str:
-    """Infer a reasonable prefix from the port name and interface type.
-
-    Args:
-        port_name: Name of the port (e.g., 'bus', 'uart', 'i2c_pins')
-        interface_str: Interface type string
-
-    Returns:
-        Suggested prefix for signal names
-    """
-    # Use the port name directly as the prefix
-    # But apply some common transformations
-    name = port_name.lower()
-
-    # Remove common suffixes
-    for suffix in ("_pins", "_bus", "_port", "_interface"):
-        if name.endswith(suffix):
-            name = name[: -len(suffix)]
-            break
-
-    # Map some interface types to common prefixes if port name is generic
-    if name in ("bus", "port"):
-        if "wishbone" in interface_str.lower():
-            return "wb"
-        elif "csr" in interface_str.lower():
-            return "csr"
-
-    return name
 
 
 class VerilogWrapper(wiring.Component):
@@ -507,6 +620,9 @@ class VerilogWrapper(wiring.Component):
 
     When a driver configuration is provided, the component uses SoftwareDriverSignature
     to enable automatic driver generation and register struct creation.
+
+    Auto-mapping works by parsing the Verilog files to find actual port names,
+    then matching patterns to identify which signals correspond to interface members.
     """
 
     def __init__(self, config: ExternalWrapConfig, verilog_files: List[Path] | None = None):
@@ -520,6 +636,9 @@ class VerilogWrapper(wiring.Component):
         self._verilog_files = verilog_files or []
         self._port_mappings: Dict[str, Dict[str, str]] = {}
 
+        # Parse Verilog to get port information for auto-mapping
+        verilog_ports = self._parse_verilog_ports()
+
         # Build signature from ports and pins
         signature_members = {}
 
@@ -529,7 +648,7 @@ class VerilogWrapper(wiring.Component):
             sig_member = self._create_signature_member(port_config, config, default_direction=default_dir)
             signature_members[port_name] = sig_member
             self._port_mappings[port_name] = self._get_port_mapping(
-                port_name, port_config, port_config.direction or default_dir
+                port_name, port_config, port_config.direction or default_dir, verilog_ports
             )
 
         # Process pins (I/O interfaces to pads) - typically direction="out"
@@ -538,7 +657,7 @@ class VerilogWrapper(wiring.Component):
             sig_member = self._create_signature_member(pin_config, config, default_direction=default_dir)
             signature_members[pin_name] = sig_member
             self._port_mappings[pin_name] = self._get_port_mapping(
-                pin_name, pin_config, pin_config.direction or default_dir
+                pin_name, pin_config, pin_config.direction or default_dir, verilog_ports
             )
 
         # Use SoftwareDriverSignature if driver config is provided
@@ -561,15 +680,36 @@ class VerilogWrapper(wiring.Component):
         else:
             super().__init__(signature_members)
 
+    def _parse_verilog_ports(self) -> Dict[str, str]:
+        """Parse all Verilog files to extract port information.
+
+        Returns:
+            Dictionary mapping port names to their directions
+        """
+        all_ports: Dict[str, str] = {}
+
+        for verilog_file in self._verilog_files:
+            if verilog_file.exists():
+                try:
+                    content = verilog_file.read_text()
+                    ports = _parse_verilog_ports(content, self._config.name)
+                    all_ports.update(ports)
+                except Exception:
+                    # If parsing fails, continue without those ports
+                    pass
+
+        return all_ports
+
     def _get_port_mapping(
-        self, port_name: str, port_config: Port, direction: str
+        self, port_name: str, port_config: Port, direction: str, verilog_ports: Dict[str, str]
     ) -> Dict[str, str]:
-        """Get port mapping, auto-generating if not explicitly provided.
+        """Get port mapping, auto-inferring from Verilog if not explicitly provided.
 
         Args:
             port_name: Name of the port
             port_config: Port configuration from TOML
             direction: Direction of the port ('in' or 'out')
+            verilog_ports: Dictionary of Verilog port names to directions
 
         Returns:
             Flattened port mapping dictionary
@@ -578,10 +718,31 @@ class VerilogWrapper(wiring.Component):
             # Explicit mapping provided
             return _flatten_port_map(port_config.map)
 
-        # Auto-generate mapping
+        # Try to infer mapping from Verilog ports
+        if verilog_ports:
+            try:
+                return _infer_auto_map(port_config.interface, verilog_ports, direction)
+            except ChipFlowError:
+                pass  # Fall through to prefix-based generation
+
+        # Fallback: generate mapping using prefix convention
         prefix = port_config.prefix
         if prefix is None:
-            prefix = _infer_prefix_from_port_name(port_name, port_config.interface)
+            # Infer prefix from port name
+            name = port_name.lower()
+            for suffix in ("_pins", "_bus", "_port", "_interface"):
+                if name.endswith(suffix):
+                    name = name[: -len(suffix)]
+                    break
+            if name in ("bus", "port"):
+                if "wishbone" in port_config.interface.lower():
+                    prefix = "wb"
+                elif "csr" in port_config.interface.lower():
+                    prefix = "csr"
+                else:
+                    prefix = name
+            else:
+                prefix = name
 
         return _generate_auto_map(port_config.interface, prefix, direction)
 
