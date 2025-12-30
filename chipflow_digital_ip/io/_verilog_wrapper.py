@@ -191,14 +191,16 @@ class GenerateYosysSlang(BaseModel):
     """Configuration for SystemVerilog to Verilog conversion using yosys-slang.
 
     This uses the yosys-slang plugin (https://github.com/povik/yosys-slang) to read
-    SystemVerilog directly into Yosys, then outputs Verilog. This can be used with
-    yowasp-yosys for a pure-Python solution without native tool dependencies.
+    SystemVerilog directly into Yosys, then outputs Verilog.
+
+    For yowasp-yosys, slang is built-in (statically linked), so no plugin loading
+    is needed. For native yosys, the slang plugin must be loaded with -m slang.
     """
 
     include_dirs: List[str] = []
     defines: Dict[str, str] = {}
     top_module: Optional[str] = None
-    yosys_command: str = "yosys"  # Can be overridden for yowasp-yosys
+    yosys_command: str = "yosys"  # Can be overridden
 
     def generate(
         self, source_path: Path, dest_path: Path, name: str, parameters: Dict[str, JsonValue]
@@ -214,8 +216,8 @@ class GenerateYosysSlang(BaseModel):
         Returns:
             List of generated Verilog file paths
         """
-        # Try to use yowasp-yosys first, then fall back to native yosys
-        yosys_cmd = self._find_yosys()
+        # Find yosys and determine if slang is built-in
+        yosys_cmd, slang_builtin = self._find_yosys()
 
         # Collect all SystemVerilog files
         sv_files = list(source_path.glob("**/*.sv"))
@@ -249,8 +251,11 @@ proc
 write_verilog -noattr {output_file}
 """
 
-        # Run yosys with slang plugin
-        cmd = [yosys_cmd, "-m", "slang", "-p", yosys_script]
+        # Build command - yowasp-yosys has slang built-in, native yosys needs plugin
+        if slang_builtin:
+            cmd = [yosys_cmd, "-p", yosys_script]
+        else:
+            cmd = [yosys_cmd, "-m", "slang", "-p", yosys_script]
 
         try:
             result = subprocess.run(
@@ -266,8 +271,8 @@ write_verilog -noattr {output_file}
             )
         except FileNotFoundError:
             raise ChipFlowError(
-                f"yosys not found. Install yosys with slang plugin or use yowasp-yosys. "
-                f"Tried: {yosys_cmd}"
+                f"yosys not found. Install yowasp-yosys (pip install yowasp-yosys) "
+                f"or native yosys with slang plugin. Tried: {yosys_cmd}"
             )
 
         if not output_file.exists():
@@ -275,27 +280,35 @@ write_verilog -noattr {output_file}
 
         return [output_file]
 
-    def _find_yosys(self) -> str:
-        """Find yosys executable, preferring yowasp-yosys if available."""
+    def _find_yosys(self) -> tuple[str, bool]:
+        """Find yosys executable and determine if slang is built-in.
+
+        Returns:
+            Tuple of (command, slang_builtin) where slang_builtin is True for
+            yowasp-yosys (slang statically linked) and False for native yosys
+            (slang loaded as plugin).
+        """
         # Check if custom command is set
         if self.yosys_command != "yosys":
-            return self.yosys_command
+            # Assume custom command needs plugin unless it's yowasp-yosys
+            is_yowasp = "yowasp" in self.yosys_command.lower()
+            return (self.yosys_command, is_yowasp)
 
-        # Try yowasp-yosys first (Python package)
+        # Try yowasp-yosys first (Python package) - slang is built-in
         try:
-            import yowasp_yosys
-            return "yowasp-yosys"
+            import yowasp_yosys  # noqa: F401
+            return ("yowasp-yosys", True)
         except ImportError:
             pass
 
-        # Try native yosys
+        # Try native yosys - slang must be loaded as plugin
         if shutil.which("yosys"):
-            return "yosys"
+            return ("yosys", False)
 
         raise ChipFlowError(
             "Neither yowasp-yosys nor native yosys found. "
             "Install yowasp-yosys: pip install yowasp-yosys, "
-            "or install yosys with slang plugin."
+            "or install native yosys with slang plugin."
         )
 
 
