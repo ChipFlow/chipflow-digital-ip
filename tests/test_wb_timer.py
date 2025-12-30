@@ -8,8 +8,8 @@ This module tests the wb_timer SystemVerilog IP wrapped as an Amaranth component
 via the VerilogWrapper system. It demonstrates how external Verilog/SystemVerilog
 modules can be integrated and tested within the ChipFlow ecosystem.
 
-Note: Full simulation requires sv2v to be installed for SystemVerilog conversion.
-The configuration and signature tests work without sv2v.
+Note: Full simulation requires yosys with slang plugin (or yowasp-yosys) for
+SystemVerilog conversion. The configuration and signature tests work without it.
 """
 
 import shutil
@@ -27,6 +27,31 @@ from chipflow_digital_ip.io import load_wrapper_from_toml
 
 # Path to the wb_timer TOML configuration
 WB_TIMER_TOML = Path(__file__).parent.parent / "chipflow_digital_ip" / "io" / "sv_timer" / "wb_timer.toml"
+
+
+def _has_yosys_slang() -> bool:
+    """Check if yosys with slang plugin is available."""
+    # Try yowasp-yosys first
+    try:
+        import yowasp_yosys
+        return True
+    except ImportError:
+        pass
+
+    # Try native yosys with slang
+    if shutil.which("yosys"):
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["yosys", "-m", "slang", "-p", "help read_slang"],
+                capture_output=True,
+                timeout=10
+            )
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+    return False
 
 
 class WbTimerConfigTestCase(unittest.TestCase):
@@ -73,9 +98,9 @@ class WbTimerConfigTestCase(unittest.TestCase):
         self.assertIn("drivers/wb_timer.h", config.driver.h_files)
 
 
-@unittest.skipUnless(shutil.which("sv2v"), "sv2v not installed")
+@unittest.skipUnless(_has_yosys_slang(), "yosys with slang plugin not available")
 class WbTimerWrapperTestCase(unittest.TestCase):
-    """Test the wb_timer wrapper instantiation (requires sv2v)."""
+    """Test the wb_timer wrapper instantiation (requires yosys-slang)."""
 
     def setUp(self):
         warnings.simplefilter(action="ignore", category=UnusedElaboratable)
@@ -124,7 +149,7 @@ class _WbTimerHarness(Elaboratable):
         return m
 
 
-@unittest.skipUnless(shutil.which("sv2v"), "sv2v not installed")
+@unittest.skipUnless(_has_yosys_slang(), "yosys with slang plugin not available")
 class WbTimerSimulationTestCase(unittest.TestCase):
     """Simulation tests for the wb_timer peripheral.
 

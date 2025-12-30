@@ -6,10 +6,13 @@ name = 'wb_timer'
 [files]
 path = '.'
 
+# Generator options:
+#   'yosys_slang' - Uses yosys with slang plugin (preferred, works with yowasp-yosys)
+#   'systemverilog' - Uses sv2v for conversion (requires sv2v installed)
 [generate]
-generator = 'systemverilog'
+generator = 'yosys_slang'
 
-[generate.sv2v]
+[generate.yosys_slang]
 top_module = 'wb_timer'
 
 [clocks]
