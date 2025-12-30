@@ -12,6 +12,7 @@ from amaranth.hdl import UnusedElaboratable
 
 from chipflow import ChipFlowError
 from chipflow_digital_ip.io._verilog_wrapper import (
+    DriverConfig,
     ExternalWrapConfig,
     Files,
     Generate,
@@ -294,6 +295,116 @@ map = 'o_irq'
             self.assertEqual(config.name, "SVTest")
             self.assertEqual(config.generate.generator, Generators.SYSTEMVERILOG)
             self.assertEqual(config.generate.sv2v.top_module, "test_module")
+        finally:
+            toml_path.unlink()
+
+
+class DriverConfigTestCase(unittest.TestCase):
+    def test_driver_config_defaults(self):
+        driver = DriverConfig()
+        self.assertIsNone(driver.regs_struct)
+        self.assertEqual(driver.c_files, [])
+        self.assertEqual(driver.h_files, [])
+
+    def test_driver_config_full(self):
+        driver = DriverConfig(
+            regs_struct='timer_regs_t',
+            c_files=['drivers/timer.c'],
+            h_files=['drivers/timer.h'],
+        )
+        self.assertEqual(driver.regs_struct, 'timer_regs_t')
+        self.assertEqual(driver.c_files, ['drivers/timer.c'])
+        self.assertEqual(driver.h_files, ['drivers/timer.h'])
+
+
+class PortDirectionTestCase(unittest.TestCase):
+    def test_port_direction_explicit(self):
+        port = Port(
+            interface='amaranth.lib.wiring.Out(1)',
+            map='o_signal',
+            direction='out'
+        )
+        self.assertEqual(port.direction, 'out')
+
+    def test_port_direction_none(self):
+        port = Port(
+            interface='amaranth.lib.wiring.Out(1)',
+            map='o_signal',
+        )
+        self.assertIsNone(port.direction)
+
+    def test_config_with_ports_and_pins(self):
+        config = ExternalWrapConfig(
+            name="TestModule",
+            files=Files(path=Path("/tmp")),
+            ports={
+                "bus": Port(
+                    interface="amaranth.lib.wiring.Out(1)",
+                    map="i_bus",
+                    direction="in"
+                )
+            },
+            pins={
+                "irq": Port(
+                    interface="amaranth.lib.wiring.Out(1)",
+                    map="o_irq",
+                    direction="out"
+                )
+            },
+            driver=DriverConfig(
+                regs_struct='test_regs_t',
+                h_files=['drivers/test.h']
+            )
+        )
+        self.assertIn("bus", config.ports)
+        self.assertIn("irq", config.pins)
+        self.assertIsNotNone(config.driver)
+        self.assertEqual(config.driver.regs_struct, 'test_regs_t')
+
+    def test_load_toml_with_driver(self):
+        toml_content = """
+name = 'DriverTest'
+
+[files]
+path = '/tmp'
+
+[clocks]
+sys = 'clk'
+
+[resets]
+sys = 'rst_n'
+
+[ports.bus]
+interface = 'amaranth.lib.wiring.Out(1)'
+map = 'i_bus'
+direction = 'in'
+
+[pins.irq]
+interface = 'amaranth.lib.wiring.Out(1)'
+map = 'o_irq'
+
+[driver]
+regs_struct = 'my_regs_t'
+c_files = ['drivers/my_driver.c']
+h_files = ['drivers/my_driver.h']
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
+            f.write(toml_content)
+            toml_path = Path(f.name)
+
+        try:
+            import tomli
+            with open(toml_path, 'rb') as f:
+                raw = tomli.load(f)
+            config = ExternalWrapConfig.model_validate(raw)
+            self.assertEqual(config.name, "DriverTest")
+            self.assertIn("bus", config.ports)
+            self.assertEqual(config.ports["bus"].direction, "in")
+            self.assertIn("irq", config.pins)
+            self.assertIsNotNone(config.driver)
+            self.assertEqual(config.driver.regs_struct, "my_regs_t")
+            self.assertEqual(config.driver.c_files, ["drivers/my_driver.c"])
+            self.assertEqual(config.driver.h_files, ["drivers/my_driver.h"])
         finally:
             toml_path.unlink()
 

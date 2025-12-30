@@ -18,8 +18,10 @@ sys = 'clk'
 [resets]
 sys = 'rst_n'
 
+# Bus interface (typically direction = "in" from Amaranth's perspective)
 [ports.bus]
 interface = 'amaranth_soc.wishbone.Signature'
+direction = 'in'
 
 [ports.bus.params]
 addr_width = 4
@@ -36,43 +38,12 @@ dat_w = 'i_wb_dat'
 dat_r = 'o_wb_dat'
 ack = 'o_wb_ack'
 
-[ports.irq]
+# Pin interfaces (typically direction = "out" - we provide them to IO pads)
+[pins.irq]
 interface = 'amaranth.lib.wiring.Out(1)'
 map = 'o_irq'
 
-[drivers.c]
-header = '''
-#ifndef WB_TIMER_H
-#define WB_TIMER_H
-
-#include <stdint.h>
-
-#define WB_TIMER_CTRL    0x00
-#define WB_TIMER_COMPARE 0x04
-#define WB_TIMER_COUNTER 0x08
-#define WB_TIMER_STATUS  0x0C
-
-#define WB_TIMER_CTRL_ENABLE   (1 << 0)
-#define WB_TIMER_CTRL_IRQ_EN   (1 << 1)
-
-#define WB_TIMER_STATUS_IRQ_PENDING (1 << 0)
-#define WB_TIMER_STATUS_MATCH       (1 << 1)
-
-static inline void wb_timer_enable(volatile uint32_t *base, uint16_t prescaler) {
-    base[0] = (prescaler << 16) | WB_TIMER_CTRL_ENABLE | WB_TIMER_CTRL_IRQ_EN;
-}
-
-static inline void wb_timer_set_compare(volatile uint32_t *base, uint32_t value) {
-    base[1] = value;
-}
-
-static inline uint32_t wb_timer_get_counter(volatile uint32_t *base) {
-    return base[2];
-}
-
-static inline void wb_timer_clear_irq(volatile uint32_t *base) {
-    base[3] = WB_TIMER_STATUS_IRQ_PENDING | WB_TIMER_STATUS_MATCH;
-}
-
-#endif
-'''
+# Software driver configuration for SoftwareDriverSignature
+[driver]
+regs_struct = 'wb_timer_regs_t'
+h_files = ['drivers/wb_timer.h']
