@@ -5,7 +5,7 @@ modules as Amaranth wiring.Component classes. It supports:
 
 - Automatic Signature generation from TOML port definitions
 - SpinalHDL code generation
-- SystemVerilog to Verilog conversion via sv2v
+- SystemVerilog to Verilog conversion via sv2v or yosys-slang
 - Clock and reset signal mapping
 - Port and pin interface mapping to Verilog signals
 """
@@ -187,12 +187,125 @@ class GenerateSV2V(BaseModel):
         return [output_file]
 
 
+class GenerateYosysSlang(BaseModel):
+    """Configuration for SystemVerilog to Verilog conversion using yosys-slang.
+
+    This uses the yosys-slang plugin (https://github.com/povik/yosys-slang) to read
+    SystemVerilog directly into Yosys, then outputs Verilog. This can be used with
+    yowasp-yosys for a pure-Python solution without native tool dependencies.
+    """
+
+    include_dirs: List[str] = []
+    defines: Dict[str, str] = {}
+    top_module: Optional[str] = None
+    yosys_command: str = "yosys"  # Can be overridden for yowasp-yosys
+
+    def generate(
+        self, source_path: Path, dest_path: Path, name: str, parameters: Dict[str, JsonValue]
+    ) -> List[Path]:
+        """Convert SystemVerilog files to Verilog using yosys-slang.
+
+        Args:
+            source_path: Path containing SystemVerilog files
+            dest_path: Output directory for converted Verilog
+            name: Output file name (without extension)
+            parameters: Template parameters (unused)
+
+        Returns:
+            List of generated Verilog file paths
+        """
+        # Try to use yowasp-yosys first, then fall back to native yosys
+        yosys_cmd = self._find_yosys()
+
+        # Collect all SystemVerilog files
+        sv_files = list(source_path.glob("**/*.sv"))
+        if not sv_files:
+            raise ChipFlowError(f"No SystemVerilog files found in {source_path}")
+
+        # Build yosys script
+        output_file = dest_path / f"{name}.v"
+
+        # Build read_slang arguments
+        read_slang_args = []
+        if self.top_module:
+            read_slang_args.append(f"--top {self.top_module}")
+        for inc_dir in self.include_dirs:
+            inc_path = source_path / inc_dir
+            if inc_path.exists():
+                read_slang_args.append(f"-I{inc_path}")
+        for define_name, define_value in self.defines.items():
+            if define_value:
+                read_slang_args.append(f"-D{define_name}={define_value}")
+            else:
+                read_slang_args.append(f"-D{define_name}")
+
+        # Add source files
+        read_slang_args.extend(str(f) for f in sv_files)
+
+        yosys_script = f"""
+read_slang {' '.join(read_slang_args)}
+hierarchy -check {f'-top {self.top_module}' if self.top_module else ''}
+proc
+write_verilog -noattr {output_file}
+"""
+
+        # Run yosys with slang plugin
+        cmd = [yosys_cmd, "-m", "slang", "-p", yosys_script]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise ChipFlowError(
+                f"yosys-slang conversion failed:\nCommand: {' '.join(cmd)}\n"
+                f"Stderr: {e.stderr}\nStdout: {e.stdout}"
+            )
+        except FileNotFoundError:
+            raise ChipFlowError(
+                f"yosys not found. Install yosys with slang plugin or use yowasp-yosys. "
+                f"Tried: {yosys_cmd}"
+            )
+
+        if not output_file.exists():
+            raise ChipFlowError(f"yosys-slang did not produce output file: {output_file}")
+
+        return [output_file]
+
+    def _find_yosys(self) -> str:
+        """Find yosys executable, preferring yowasp-yosys if available."""
+        # Check if custom command is set
+        if self.yosys_command != "yosys":
+            return self.yosys_command
+
+        # Try yowasp-yosys first (Python package)
+        try:
+            import yowasp_yosys
+            return "yowasp-yosys"
+        except ImportError:
+            pass
+
+        # Try native yosys
+        if shutil.which("yosys"):
+            return "yosys"
+
+        raise ChipFlowError(
+            "Neither yowasp-yosys nor native yosys found. "
+            "Install yowasp-yosys: pip install yowasp-yosys, "
+            "or install yosys with slang plugin."
+        )
+
+
 class Generators(StrEnum):
     """Supported code generators."""
 
     SPINALHDL = auto()
     VERILOG = auto()
     SYSTEMVERILOG = auto()
+    YOSYS_SLANG = auto()
 
 
 class Generate(BaseModel):
@@ -202,6 +315,7 @@ class Generate(BaseModel):
     generator: Generators
     spinalhdl: Optional[GenerateSpinalHDL] = None
     sv2v: Optional[GenerateSV2V] = None
+    yosys_slang: Optional[GenerateYosysSlang] = None
 
 
 class Port(BaseModel):
@@ -922,6 +1036,14 @@ def load_wrapper_from_toml(
             # Convert SystemVerilog to Verilog using sv2v
             sv2v_config = config.generate.sv2v or GenerateSV2V()
             generated = sv2v_config.generate(
+                source_path, generate_dest, config.name, parameters
+            )
+            verilog_files.extend(generated)
+
+        elif config.generate.generator == Generators.YOSYS_SLANG:
+            # Convert SystemVerilog to Verilog using yosys-slang
+            yosys_slang_config = config.generate.yosys_slang or GenerateYosysSlang()
+            generated = yosys_slang_config.generate(
                 source_path, generate_dest, config.name, parameters
             )
             verilog_files.extend(generated)
