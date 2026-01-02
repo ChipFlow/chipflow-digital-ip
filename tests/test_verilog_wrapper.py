@@ -170,7 +170,7 @@ class VerilogWrapperTestCase(unittest.TestCase):
         m = wrapper.elaborate(platform=None)
         self.assertIsInstance(m, Module)
         # Check that the wrapped submodule exists
-        self.assertIn("wrapped", m._submodules)
+        self.assertTrue(hasattr(m.submodules, "wrapped"))
 
 
 class LoadWrapperFromTomlTestCase(unittest.TestCase):

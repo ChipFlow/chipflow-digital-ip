@@ -669,8 +669,14 @@ def _infer_auto_map(
             inferred_dir = _infer_signal_direction(port_name)
             actual_dir = "i" if port_dir == "input" else ("o" if port_dir == "output" else inferred_dir)
 
-            # For ports with direction="out", we flip expectations
-            if port_direction == "out":
+            # For bus interfaces (Wishbone, CSR), direction determines master/slave
+            # and we flip signal directions accordingly. For pin interfaces (UART, I2C, etc.),
+            # direction="out" is the normal case and signals shouldn't be flipped.
+            is_bus_interface = interface_str in (
+                "amaranth_soc.wishbone.Signature",
+                "amaranth_soc.csr.Signature",
+            )
+            if is_bus_interface and port_direction == "out":
                 check_dir = "o" if expected_dir == "i" else "i"
             else:
                 check_dir = expected_dir
@@ -875,7 +881,7 @@ class VerilogWrapper(wiring.Component):
 
     def _create_signature_member(
         self, port_config: Port, config: ExternalWrapConfig, default_direction: str = "in"
-    ) -> In | Out:
+    ):
         """Create a signature member from port configuration.
 
         Args:
@@ -1023,8 +1029,10 @@ def load_wrapper_from_toml(
 
     verilog_files = []
 
-    # Get source path
+    # Get source path, resolving relative paths against the TOML file's directory
     source_path = config.files.get_source_path()
+    if not source_path.is_absolute():
+        source_path = (toml_path.parent / source_path).resolve()
 
     # Handle code generation if configured
     if config.generate:
