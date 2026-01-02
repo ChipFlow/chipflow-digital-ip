@@ -17,3 +17,4 @@ __pycache__/
 # build outputs
 build
 /overrides.txt
+.python-version
