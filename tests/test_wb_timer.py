@@ -104,7 +104,9 @@ class WbTimerWrapperTestCase(unittest.TestCase):
 
     def setUp(self):
         warnings.simplefilter(action="ignore", category=UnusedElaboratable)
-        self._generate_dest = tempfile.mkdtemp(prefix="wb_timer_test_")
+        # Use a local directory instead of /tmp - yowasp-yosys (WASM) can't access /tmp
+        self._generate_dest = Path("build/test_wb_timer").absolute()
+        self._generate_dest.mkdir(parents=True, exist_ok=True)
 
     def tearDown(self):
         import shutil as sh
@@ -173,7 +175,9 @@ class WbTimerSimulationTestCase(unittest.TestCase):
 
     def setUp(self):
         warnings.simplefilter(action="ignore", category=UnusedElaboratable)
-        self._generate_dest = tempfile.mkdtemp(prefix="wb_timer_sim_")
+        # Use a local directory instead of /tmp - yowasp-yosys (WASM) can't access /tmp
+        self._generate_dest = Path("build/test_wb_timer_sim").absolute()
+        self._generate_dest.mkdir(parents=True, exist_ok=True)
 
     def tearDown(self):
         import shutil as sh
