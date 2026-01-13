@@ -19,7 +19,7 @@ dependencies = [
     "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio",
     "minerva @ git+https://github.com/minerva-cpu/minerva",
-    "pythondata-misc-usb_ohci @ git+https://github.com/robtaylor/pythondata-misc-usb_ohci@update-spinalhdl",
+    "pythondata-misc-usb_ohci @ git+https://github.com/robtaylor/pythondata-misc-usb_ohci@f366de36d0cf04ca9b96614a424ae4feea0851a8",
     "pydantic>=2.0",
     "tomli>=2.0",
     "yowasp-yosys>=0.50",  # For SystemVerilog support via built-in yosys-slang
