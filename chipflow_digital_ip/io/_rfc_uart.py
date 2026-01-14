@@ -9,7 +9,7 @@ from amaranth.lib import stream, wiring
 from amaranth.lib.wiring import In, Out, flipped, connect
 from amaranth.hdl import ValueCastable
 
-from amaranth_types.types import HasElaborate, ShapeLike, ValueLike
+from amaranth_types.types import ShapeLike
 
 from amaranth_soc import csr
 
