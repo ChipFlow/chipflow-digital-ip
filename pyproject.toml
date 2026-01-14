@@ -15,6 +15,7 @@ license-files = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "amaranth>=0.5,<0.6",
+    "amaranth-stubs",
     "chipflow @ git+https://github.com/ChipFlow/chipflow-lib.git",
     "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio",
