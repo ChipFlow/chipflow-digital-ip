@@ -12,8 +12,8 @@ Note: Full simulation requires yosys with slang plugin (or yowasp-yosys) for
 SystemVerilog conversion. The configuration and signature tests work without it.
 """
 
+import importlib.util
 import shutil
-import tempfile
 import unittest
 import warnings
 from pathlib import Path
@@ -31,12 +31,9 @@ WB_TIMER_TOML = Path(__file__).parent.parent / "chipflow_digital_ip" / "io" / "s
 
 def _has_yosys_slang() -> bool:
     """Check if yosys with slang plugin is available."""
-    # Try yowasp-yosys first
-    try:
-        import yowasp_yosys
+    # Try yowasp-yosys first (use find_spec to avoid F401 lint warning)
+    if importlib.util.find_spec("yowasp_yosys") is not None:
         return True
-    except ImportError:
-        pass
 
     # Try native yosys with slang
     if shutil.which("yosys"):

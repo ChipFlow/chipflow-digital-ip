@@ -25,7 +25,6 @@ from chipflow_digital_ip.io._verilog_wrapper import (
     _infer_auto_map,
     _infer_signal_direction,
     _INTERFACE_PATTERNS,
-    _INTERFACE_REGISTRY,
     _parse_signal_direction,
     _parse_verilog_ports,
     _resolve_interface_type,

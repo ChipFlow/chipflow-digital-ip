@@ -21,8 +21,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Self
 
 import tomli
-
-logger = logging.getLogger(__name__)
 from pydantic import BaseModel, JsonValue, ValidationError, model_validator
 
 from amaranth import ClockSignal, Instance, Module, ResetSignal
@@ -30,6 +28,8 @@ from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out
 
 from chipflow import ChipFlowError
+
+logger = logging.getLogger(__name__)
 
 
 __all__ = [
