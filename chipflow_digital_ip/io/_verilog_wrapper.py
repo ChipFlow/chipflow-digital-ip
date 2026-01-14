@@ -10,6 +10,7 @@ modules as Amaranth wiring.Component classes. It supports:
 - Port and pin interface mapping to Verilog signals
 """
 
+import logging
 import os
 import re
 import shutil
@@ -20,6 +21,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Self
 
 import tomli
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel, JsonValue, ValidationError, model_validator
 
 from amaranth import ClockSignal, Instance, Module, ResetSignal
@@ -572,9 +575,9 @@ def _parse_verilog_ports(verilog_content: str, module_name: str) -> Dict[str, st
         ports[name] = direction.lower()
 
     # Also look for non-ANSI declarations after the module header
-    # Find the module body
-    module_body_start = verilog_content.find(";", module_match.end() if module_match else 0)
-    if module_body_start != -1:
+    # The module_match already includes the trailing semicolon, so start from there
+    module_body_start = module_match.end() if module_match else 0
+    if module_body_start > 0:
         # Look for standalone input/output declarations
         body_pattern = r"^\s*(input|output|inout)\s+(?:logic|wire|reg)?\s*(?:\[[^\]]*\])?\s*(\w+)"
         for match in re.finditer(
@@ -793,6 +796,9 @@ class VerilogWrapper(wiring.Component):
                 pin_name, pin_config, pin_config.direction or default_dir, verilog_ports
             )
 
+        # Validate signal bindings after port mappings are built
+        self._validate_signal_bindings(verilog_ports)
+
         # Use SoftwareDriverSignature if driver config is provided
         if config.driver:
             try:
@@ -832,6 +838,56 @@ class VerilogWrapper(wiring.Component):
                     pass
 
         return all_ports
+
+    def _validate_signal_bindings(self, verilog_ports: Dict[str, str]) -> None:
+        """Validate that configured signals exist in the Verilog module.
+
+        Raises ChipFlowError for missing required signals (clocks/resets).
+        Logs warnings for unmapped Verilog ports.
+        """
+        if not verilog_ports:
+            logger.warning(
+                f"[{self._config.name}] Could not parse Verilog ports - "
+                "signal validation skipped"
+            )
+            return
+
+        # Track which Verilog ports are mapped
+        mapped_ports: set[str] = set()
+
+        # Validate clock signals
+        for clock_name, verilog_signal in self._config.clocks.items():
+            expected_port = f"i_{verilog_signal}"
+            mapped_ports.add(expected_port)
+            if expected_port not in verilog_ports:
+                raise ChipFlowError(
+                    f"[{self._config.name}] Clock signal '{verilog_signal}' "
+                    f"(expecting port '{expected_port}') not found in Verilog module. "
+                    f"Available ports: {sorted(verilog_ports.keys())}"
+                )
+
+        # Validate reset signals
+        for reset_name, verilog_signal in self._config.resets.items():
+            expected_port = f"i_{verilog_signal}"
+            mapped_ports.add(expected_port)
+            if expected_port not in verilog_ports:
+                raise ChipFlowError(
+                    f"[{self._config.name}] Reset signal '{verilog_signal}' "
+                    f"(expecting port '{expected_port}') not found in Verilog module. "
+                    f"Available ports: {sorted(verilog_ports.keys())}"
+                )
+
+        # Collect all mapped port signals from the actual port mappings
+        for port_name, port_map in self._port_mappings.items():
+            mapped_ports.update(port_map.values())
+
+        # Warn about unmapped Verilog ports (excluding clk/rst which are handled specially)
+        unmapped = set(verilog_ports.keys()) - mapped_ports
+        if unmapped:
+            logger.warning(
+                f"[{self._config.name}] Unmapped Verilog ports: {sorted(unmapped)}. "
+                "These signals will not be connected."
+            )
 
     def _get_port_mapping(
         self, port_name: str, port_config: Port, direction: str, verilog_ports: Dict[str, str]
