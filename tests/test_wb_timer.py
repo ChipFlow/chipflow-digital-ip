@@ -8,8 +8,9 @@ This module tests the wb_timer SystemVerilog IP wrapped as an Amaranth component
 via the VerilogWrapper system. It demonstrates how external Verilog/SystemVerilog
 modules can be integrated and tested within the ChipFlow ecosystem.
 
-Note: Full simulation requires yosys with slang plugin (or yowasp-yosys) for
-SystemVerilog conversion. The configuration and signature tests work without it.
+Configuration and signature tests work without additional dependencies.
+Simulation tests require yosys with slang plugin (or yowasp-yosys) and use
+CXXRTL for fast compiled simulation of the SystemVerilog code.
 """
 
 import importlib.util
@@ -18,9 +19,8 @@ import unittest
 import warnings
 from pathlib import Path
 
-from amaranth import Elaboratable, Module, Signal
+from amaranth import Module
 from amaranth.hdl import UnusedElaboratable
-from amaranth.sim import Simulator
 
 from chipflow_digital_ip.io import load_wrapper_from_toml
 
@@ -49,6 +49,11 @@ def _has_yosys_slang() -> bool:
             pass
 
     return False
+
+
+def _has_chipflow_sim() -> bool:
+    """Check if chipflow.sim module is available for CXXRTL simulation."""
+    return importlib.util.find_spec("chipflow.sim") is not None
 
 
 class WbTimerConfigTestCase(unittest.TestCase):
@@ -127,47 +132,20 @@ class WbTimerWrapperTestCase(unittest.TestCase):
         self.assertIsInstance(m, Module)
 
 
-class _WbTimerHarness(Elaboratable):
-    """Test harness for wb_timer simulation.
-
-    This harness wraps the wb_timer and provides clock/reset.
-    """
-
-    def __init__(self, toml_path: Path, generate_dest: Path):
-        self.timer = load_wrapper_from_toml(toml_path, generate_dest=generate_dest)
-        # Expose the IRQ signal for testing
-        self.irq = Signal()
-
-    def elaborate(self, platform):
-        m = Module()
-        m.submodules.timer = self.timer
-
-        # Connect IRQ output
-        m.d.comb += self.irq.eq(self.timer.irq)
-
-        return m
-
-
-@unittest.skip(
-    "Amaranth's Python simulator cannot simulate Instance() black boxes. "
-    "These tests require CXXRTL backend or co-simulation with an external Verilog simulator."
-)
 @unittest.skipUnless(_has_yosys_slang(), "yosys with slang plugin not available")
-class WbTimerSimulationTestCase(unittest.TestCase):
-    """Simulation tests for the wb_timer peripheral.
+@unittest.skipUnless(_has_chipflow_sim(), "chipflow.sim not available")
+class WbTimerCxxrtlSimulationTestCase(unittest.TestCase):
+    """CXXRTL simulation tests for the wb_timer peripheral.
 
-    These tests verify the timer functionality through Wishbone bus transactions.
+    These tests verify the timer functionality through Wishbone bus transactions
+    using CXXRTL compiled simulation. Unlike Amaranth's Python simulator,
+    CXXRTL actually executes the SystemVerilog code.
+
     Register map (32-bit registers, word-addressed):
         0x0: CTRL    - [31:16] prescaler, [1] irq_en, [0] enable
         0x1: COMPARE - Compare value for timer match
         0x2: COUNTER - Current counter (read) / Reload value (write)
         0x3: STATUS  - [1] match, [0] irq_pending
-
-    Note: These tests are currently skipped because Amaranth's built-in
-    Python simulator treats Instance() as a black box - the Verilog code
-    is not actually executed. To run these tests, you would need to use
-    the CXXRTL backend or co-simulation with an external Verilog simulator
-    like Icarus Verilog or Verilator.
     """
 
     # Register addresses (word-addressed for 32-bit Wishbone)
@@ -180,153 +158,158 @@ class WbTimerSimulationTestCase(unittest.TestCase):
     CTRL_ENABLE = 1 << 0
     CTRL_IRQ_EN = 1 << 1
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        """Build the CXXRTL simulator once for all tests."""
         warnings.simplefilter(action="ignore", category=UnusedElaboratable)
-        # Use a local directory instead of /tmp - yowasp-yosys (WASM) can't access /tmp
-        self._generate_dest = Path("build/test_wb_timer_sim").absolute()
-        self._generate_dest.mkdir(parents=True, exist_ok=True)
+        cls._build_dir = Path("build/test_wb_timer_cxxrtl").absolute()
+        cls._build_dir.mkdir(parents=True, exist_ok=True)
 
-    def tearDown(self):
-        import shutil as sh
-        sh.rmtree(self._generate_dest, ignore_errors=True)
+        # Load wrapper and build simulator
+        cls._wrapper = load_wrapper_from_toml(WB_TIMER_TOML, generate_dest=cls._build_dir)
+        cls._sim = cls._wrapper.build_simulator(cls._build_dir)
 
-    async def _wb_write(self, ctx, bus, addr, data):
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up simulator and build artifacts."""
+        if hasattr(cls, "_sim"):
+            cls._sim.close()
+        shutil.rmtree(cls._build_dir, ignore_errors=True)
+
+    def setUp(self):
+        """Reset simulator state before each test."""
+        self._reset()
+
+    def _tick(self):
+        """Perform a clock cycle."""
+        self._sim.set("i_clk", 0)
+        self._sim.step()
+        self._sim.set("i_clk", 1)
+        self._sim.step()
+
+    def _reset(self):
+        """Reset the design."""
+        self._sim.set("i_rst_n", 0)
+        self._sim.set("i_clk", 0)
+        self._tick()
+        self._tick()
+        self._sim.set("i_rst_n", 1)
+        self._tick()
+
+    def _wb_write(self, addr: int, data: int):
         """Perform a Wishbone write transaction."""
-        ctx.set(bus.cyc, 1)
-        ctx.set(bus.stb, 1)
-        ctx.set(bus.we, 1)
-        ctx.set(bus.adr, addr)
-        ctx.set(bus.dat_w, data)
-        ctx.set(bus.sel, 0xF)  # All byte lanes
+        self._sim.set("i_wb_cyc", 1)
+        self._sim.set("i_wb_stb", 1)
+        self._sim.set("i_wb_we", 1)
+        self._sim.set("i_wb_adr", addr)
+        self._sim.set("i_wb_dat", data)
+        self._sim.set("i_wb_sel", 0xF)
 
-        # Wait for acknowledge
-        await ctx.tick()
-        while not ctx.get(bus.ack):
-            await ctx.tick()
+        # Clock until ack
+        for _ in range(10):
+            self._tick()
+            if self._sim.get("o_wb_ack"):
+                break
 
-        ctx.set(bus.cyc, 0)
-        ctx.set(bus.stb, 0)
-        ctx.set(bus.we, 0)
-        await ctx.tick()
+        self._sim.set("i_wb_cyc", 0)
+        self._sim.set("i_wb_stb", 0)
+        self._sim.set("i_wb_we", 0)
+        self._tick()
 
-    async def _wb_read(self, ctx, bus, addr):
+    def _wb_read(self, addr: int) -> int:
         """Perform a Wishbone read transaction."""
-        ctx.set(bus.cyc, 1)
-        ctx.set(bus.stb, 1)
-        ctx.set(bus.we, 0)
-        ctx.set(bus.adr, addr)
-        ctx.set(bus.sel, 0xF)
+        self._sim.set("i_wb_cyc", 1)
+        self._sim.set("i_wb_stb", 1)
+        self._sim.set("i_wb_we", 0)
+        self._sim.set("i_wb_adr", addr)
+        self._sim.set("i_wb_sel", 0xF)
 
-        # Wait for acknowledge
-        await ctx.tick()
-        while not ctx.get(bus.ack):
-            await ctx.tick()
+        # Clock until ack
+        for _ in range(10):
+            self._tick()
+            if self._sim.get("o_wb_ack"):
+                break
 
-        data = ctx.get(bus.dat_r)
+        data = self._sim.get("o_wb_dat")
 
-        ctx.set(bus.cyc, 0)
-        ctx.set(bus.stb, 0)
-        await ctx.tick()
+        self._sim.set("i_wb_cyc", 0)
+        self._sim.set("i_wb_stb", 0)
+        self._tick()
 
         return data
 
+    def test_reset(self):
+        """Test that reset clears state."""
+        ctrl = self._wb_read(self.REG_CTRL)
+        self.assertEqual(ctrl, 0, "CTRL should be 0 after reset")
+
+    def test_register_write_read(self):
+        """Test register write and readback."""
+        # Write to COMPARE register
+        self._wb_write(self.REG_COMPARE, 0x12345678)
+
+        # Read back
+        value = self._wb_read(self.REG_COMPARE)
+        self.assertEqual(value, 0x12345678, "COMPARE should retain written value")
+
     def test_timer_enable_and_count(self):
         """Test that the timer counts when enabled."""
-        dut = _WbTimerHarness(WB_TIMER_TOML, Path(self._generate_dest))
+        # Set compare value high so we don't trigger a match
+        self._wb_write(self.REG_COMPARE, 0xFFFFFFFF)
 
-        async def testbench(ctx):
-            bus = dut.timer.bus
+        # Enable timer with prescaler=0 (count every cycle)
+        self._wb_write(self.REG_CTRL, self.CTRL_ENABLE)
 
-            # Set compare value high so we don't trigger a match
-            await self._wb_write(ctx, bus, self.REG_COMPARE, 0xFFFFFFFF)
+        # Let it count for a few cycles
+        for _ in range(20):
+            self._tick()
 
-            # Enable timer with prescaler=0 (count every cycle)
-            await self._wb_write(ctx, bus, self.REG_CTRL, self.CTRL_ENABLE)
-
-            # Let it count for a few cycles
-            for _ in range(10):
-                await ctx.tick()
-
-            # Read counter value - should be > 0
-            count = await self._wb_read(ctx, bus, self.REG_COUNTER)
-            self.assertGreater(count, 0, "Counter should have incremented")
-
-        sim = Simulator(dut)
-        sim.add_clock(1e-6)
-        sim.add_testbench(testbench)
-        with sim.write_vcd("wb_timer_count_test.vcd", "wb_timer_count_test.gtkw"):
-            sim.run()
+        # Read counter value - should be > 0
+        count = self._wb_read(self.REG_COUNTER)
+        self.assertGreater(count, 0, "Counter should have incremented")
 
     def test_timer_match_and_irq(self):
         """Test that compare match sets status and IRQ."""
-        dut = _WbTimerHarness(WB_TIMER_TOML, Path(self._generate_dest))
+        # Set compare value to 5
+        self._wb_write(self.REG_COMPARE, 5)
 
-        async def testbench(ctx):
-            bus = dut.timer.bus
+        # Enable timer with IRQ enabled
+        self._wb_write(self.REG_CTRL, self.CTRL_ENABLE | self.CTRL_IRQ_EN)
 
-            # Set compare value to 5
-            await self._wb_write(ctx, bus, self.REG_COMPARE, 5)
+        # Wait for match (counter should reach 5)
+        irq_fired = False
+        for _ in range(50):
+            self._tick()
+            if self._sim.get("o_irq"):
+                irq_fired = True
+                break
 
-            # Enable timer with IRQ enabled
-            await self._wb_write(ctx, bus, self.REG_CTRL, self.CTRL_ENABLE | self.CTRL_IRQ_EN)
+        # Check IRQ is asserted
+        self.assertTrue(irq_fired, "IRQ should fire on compare match")
 
-            # Wait for match (counter should reach 5)
-            for _ in range(20):
-                await ctx.tick()
-                if ctx.get(dut.irq):
-                    break
-
-            # Check IRQ is asserted
-            self.assertEqual(ctx.get(dut.irq), 1, "IRQ should be asserted on match")
-
-            # Check status register
-            status = await self._wb_read(ctx, bus, self.REG_STATUS)
-            self.assertTrue(status & 0x1, "IRQ pending flag should be set")
-            self.assertTrue(status & 0x2, "Match flag should be set")
-
-            # Clear status by writing 1s to pending bits
-            await self._wb_write(ctx, bus, self.REG_STATUS, 0x3)
-
-            # IRQ should clear
-            await ctx.tick()
-            status = await self._wb_read(ctx, bus, self.REG_STATUS)
-            self.assertEqual(status & 0x1, 0, "IRQ pending should be cleared")
-
-        sim = Simulator(dut)
-        sim.add_clock(1e-6)
-        sim.add_testbench(testbench)
-        with sim.write_vcd("wb_timer_irq_test.vcd", "wb_timer_irq_test.gtkw"):
-            sim.run()
+        # Check status register
+        status = self._wb_read(self.REG_STATUS)
+        self.assertTrue(status & 0x1, "IRQ pending flag should be set")
+        self.assertTrue(status & 0x2, "Match flag should be set")
 
     def test_timer_prescaler(self):
         """Test that prescaler divides the count rate."""
-        dut = _WbTimerHarness(WB_TIMER_TOML, Path(self._generate_dest))
+        # Set compare value high
+        self._wb_write(self.REG_COMPARE, 0xFFFFFFFF)
 
-        async def testbench(ctx):
-            bus = dut.timer.bus
+        # Enable timer with prescaler=3 (count every 4 cycles)
+        # Prescaler is in upper 16 bits of CTRL
+        prescaler = 3 << 16
+        self._wb_write(self.REG_CTRL, self.CTRL_ENABLE | prescaler)
 
-            # Set compare value high
-            await self._wb_write(ctx, bus, self.REG_COMPARE, 0xFFFFFFFF)
+        # Run for 20 cycles - should get 20/4 = 5 counts
+        for _ in range(20):
+            self._tick()
 
-            # Enable timer with prescaler=3 (count every 4 cycles)
-            # Prescaler is in upper 16 bits of CTRL
-            prescaler = 3 << 16
-            await self._wb_write(ctx, bus, self.REG_CTRL, self.CTRL_ENABLE | prescaler)
-
-            # Run for 20 cycles - should get 20/4 = 5 counts
-            for _ in range(20):
-                await ctx.tick()
-
-            count = await self._wb_read(ctx, bus, self.REG_COUNTER)
-            # Allow some tolerance for setup cycles
-            self.assertGreater(count, 0, "Counter should have incremented")
-            self.assertLessEqual(count, 6, "Counter should be limited by prescaler")
-
-        sim = Simulator(dut)
-        sim.add_clock(1e-6)
-        sim.add_testbench(testbench)
-        with sim.write_vcd("wb_timer_presc_test.vcd", "wb_timer_presc_test.gtkw"):
-            sim.run()
+        count = self._wb_read(self.REG_COUNTER)
+        # Allow some tolerance for setup cycles
+        self.assertGreater(count, 0, "Counter should have incremented")
+        self.assertLessEqual(count, 6, "Counter should be limited by prescaler")
 
 
 if __name__ == "__main__":

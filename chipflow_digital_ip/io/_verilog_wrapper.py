@@ -8,6 +8,7 @@ modules as Amaranth wiring.Component classes. It supports:
 - SystemVerilog to Verilog conversion via sv2v or yosys-slang
 - Clock and reset signal mapping
 - Port and pin interface mapping to Verilog signals
+- CXXRTL simulation via chipflow.sim integration
 """
 
 import logging
@@ -1050,6 +1051,97 @@ class VerilogWrapper(wiring.Component):
                         platform.add_file(verilog_file.name, f.read())
 
         return m
+
+    def get_source_files(self) -> List[Path]:
+        """Get the list of Verilog/SystemVerilog source files.
+
+        Returns:
+            List of paths to source files for this wrapper.
+        """
+        return list(self._verilog_files)
+
+    def get_top_module(self) -> str:
+        """Get the top module name.
+
+        Returns:
+            Name of the top-level Verilog module.
+        """
+        return self._config.name
+
+    def get_signal_map(self) -> Dict[str, Dict[str, str]]:
+        """Get the mapping from Amaranth port paths to Verilog signal names.
+
+        Returns:
+            Dictionary mapping port names to signal path → Verilog name mappings.
+            Example: {'bus': {'cyc': 'i_wb_cyc', 'stb': 'i_wb_stb', ...}}
+        """
+        return dict(self._port_mappings)
+
+    def build_simulator(
+        self,
+        output_dir: Path | str,
+        *,
+        optimization: str = "-O2",
+        debug_info: bool = True,
+    ):
+        """Build a CXXRTL simulator for this wrapper.
+
+        This compiles the Verilog/SystemVerilog sources into a CXXRTL shared
+        library and returns a simulator instance ready for use.
+
+        Args:
+            output_dir: Directory for build artifacts (library, object files, etc.)
+            optimization: C++ optimization level (default: -O2)
+            debug_info: Include CXXRTL debug info for signal access (default: True)
+
+        Returns:
+            CxxrtlSimulator instance configured for this wrapper.
+
+        Raises:
+            ImportError: If chipflow.sim is not installed
+            RuntimeError: If compilation fails
+
+        Example::
+
+            wrapper = load_wrapper_from_toml("wb_timer.toml")
+            sim = wrapper.build_simulator("build/sim")
+
+            # Reset
+            sim.set("i_rst_n", 0)
+            sim.set("i_clk", 0)
+            sim.step()
+            sim.set("i_clk", 1)
+            sim.step()
+            sim.set("i_rst_n", 1)
+
+            # Access signals using Verilog names
+            sim.set("i_wb_cyc", 1)
+            sim.step()
+            value = sim.get("o_wb_dat")
+
+            sim.close()
+        """
+        try:
+            from chipflow.sim import CxxrtlSimulator, build_cxxrtl
+        except ImportError as e:
+            raise ImportError(
+                "CXXRTL simulation requires chipflow.sim. "
+                "Install chipflow-lib with simulation support."
+            ) from e
+
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build the CXXRTL library
+        lib_path = build_cxxrtl(
+            sources=self._verilog_files,
+            top_module=self._config.name,
+            output_dir=output_dir,
+            optimization=optimization,
+            debug_info=debug_info,
+        )
+
+        return CxxrtlSimulator(lib_path, self._config.name)
 
 
 def load_wrapper_from_toml(
