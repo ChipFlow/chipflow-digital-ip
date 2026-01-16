@@ -13,6 +13,7 @@ A curated collection of parameterised and configurable RTL cores implemented or 
    io
    memory
    processors
+   verilog_wrapper
 
 Indices and tables
 ==================
