@@ -28,6 +28,8 @@ from amaranth import ClockSignal, Instance, Module, ResetSignal
 from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out
 
+from amaranth_soc.memory import MemoryMap
+
 from chipflow import ChipFlowError
 
 logger = logging.getLogger(__name__)
@@ -800,6 +802,12 @@ class VerilogWrapper(wiring.Component):
         # Validate signal bindings after port mappings are built
         self._validate_signal_bindings(verilog_ports)
 
+        # Track Wishbone interfaces for memory map setup
+        wishbone_ports: Dict[str, Port] = {}
+        for port_name, port_config in config.ports.items():
+            if "wishbone" in port_config.interface.lower():
+                wishbone_ports[port_name] = port_config
+
         # Use SoftwareDriverSignature if driver config is provided
         if config.driver:
             try:
@@ -819,6 +827,24 @@ class VerilogWrapper(wiring.Component):
                 super().__init__(signature_members)
         else:
             super().__init__(signature_members)
+
+        # Set up memory maps for Wishbone interfaces
+        # This is required for adding the bus to a Wishbone decoder
+        for port_name, port_config in wishbone_ports.items():
+            port = getattr(self, port_name)
+            params = port_config.params or {}
+            addr_width = params.get("addr_width", 4)
+            data_width = params.get("data_width", 32)
+            granularity = params.get("granularity", 8)
+
+            # Memory map addr_width includes byte addressing
+            # = interface addr_width + log2(data_width/granularity)
+            import math
+            ratio = data_width // granularity
+            mmap_addr_width = addr_width + int(math.log2(ratio)) if ratio > 1 else addr_width
+
+            mmap = MemoryMap(addr_width=mmap_addr_width, data_width=granularity)
+            port.memory_map = mmap
 
     def _parse_verilog_ports(self) -> Dict[str, str]:
         """Parse all Verilog files to extract port information.
@@ -1227,6 +1253,24 @@ def load_wrapper_from_toml(
             verilog_files.append(v_file)
         for sv_file in source_path.glob("**/*.sv"):
             verilog_files.append(sv_file)
+
+    # Resolve driver file paths relative to the TOML file
+    if config.driver:
+        resolved_h_files = []
+        for h_file in config.driver.h_files:
+            h_path = Path(h_file)
+            if not h_path.is_absolute():
+                h_path = (toml_path.parent / h_path).resolve()
+            resolved_h_files.append(str(h_path))
+        config.driver.h_files = resolved_h_files
+
+        resolved_c_files = []
+        for c_file in config.driver.c_files:
+            c_path = Path(c_file)
+            if not c_path.is_absolute():
+                c_path = (toml_path.parent / c_path).resolve()
+            resolved_c_files.append(str(c_path))
+        config.driver.c_files = resolved_c_files
 
     return VerilogWrapper(config, verilog_files)
 

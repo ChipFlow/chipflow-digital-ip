@@ -160,15 +160,15 @@ data = sim.get("o_wb_dat")
 
 ## Memory Map
 
-| Address      | Peripheral    | Size   |
-|--------------|---------------|--------|
-| 0x00000000   | SPI Flash     | 16MB   |
-| 0x10000000   | SRAM          | 1KB    |
-| 0xB0000000   | Flash CSRs    | 4KB    |
-| 0xB1000000   | GPIO          | 4KB    |
-| 0xB2000000   | UART          | 4KB    |
-| 0xB3000000   | Timer (SV)    | 4KB    |
-| 0xB4000000   | SoC ID        | 4KB    |
+| Address      | Peripheral    | Size   | Interface |
+|--------------|---------------|--------|-----------|
+| 0x00000000   | SPI Flash     | 16MB   | Wishbone  |
+| 0x10000000   | SRAM          | 1KB    | Wishbone  |
+| 0xA0000000   | Timer (SV)    | 64B    | Wishbone  |
+| 0xB0000000   | Flash CSRs    | 4KB    | CSR       |
+| 0xB1000000   | GPIO          | 4KB    | CSR       |
+| 0xB2000000   | UART          | 4KB    | CSR       |
+| 0xB3000000   | SoC ID        | 4KB    | CSR       |
 
 ## License
 

@@ -67,13 +67,15 @@ class SVTimerSoC(wiring.Component):
         self.mem_spiflash_base = 0x00000000
         self.mem_sram_base     = 0x10000000
 
-        # CSR regions
+        # Wishbone peripherals (direct access, not through CSR bridge)
+        self.wb_timer_base     = 0xA0000000  # SystemVerilog timer
+
+        # CSR regions (accessed through CSR bridge)
         self.csr_base          = 0xB0000000
         self.csr_spiflash_base = 0xB0000000
         self.csr_gpio_base     = 0xB1000000
         self.csr_uart_base     = 0xB2000000
-        self.csr_timer_base    = 0xB3000000  # SystemVerilog timer
-        self.csr_soc_id_base   = 0xB4000000
+        self.csr_soc_id_base   = 0xB3000000
 
         # SRAM size
         self.sram_size = 0x400  # 1KB
@@ -153,7 +155,7 @@ class SVTimerSoC(wiring.Component):
         # Add the timer to the Wishbone decoder
         # The timer has a 32-bit Wishbone interface
         wb_decoder.add(timer_wrapper.bus, name="timer",
-                       addr=self.csr_timer_base)
+                       addr=self.wb_timer_base)
 
         # Add the timer module
         m.submodules.timer = timer_wrapper
