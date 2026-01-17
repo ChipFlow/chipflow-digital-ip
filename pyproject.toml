@@ -10,16 +10,20 @@ authors = [
 readme = {file = "README.md", content-type = "text/markdown"}
 license-files = [
     "LICENSE*",
-    "vendor/*/*/LICEN?E*",
 ]
 
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "amaranth>=0.5,<0.6",
-    "chipflow-lib @ git+https://github.com/ChipFlow/chipflow-lib.git",
+    "amaranth-stubs",
+    "chipflow @ git+https://github.com/ChipFlow/chipflow-lib.git",
     "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio",
     "minerva @ git+https://github.com/minerva-cpu/minerva",
+    "pythondata-misc-usb_ohci @ git+https://github.com/robtaylor/pythondata-misc-usb_ohci@f366de36d0cf04ca9b96614a424ae4feea0851a8",
+    "pydantic>=2.0",
+    "tomli>=2.0",
+    "yowasp-yosys>=0.50",  # For SystemVerilog support via built-in yosys-slang
 ]
 
 # Build system configuration
@@ -32,6 +36,8 @@ build-backend = "pdm.backend"
 includes = [
     "**/*.py",
     "**/*.v",
+    "**/*.sv",
+    "**/*.toml",
     "**/*.yaml"
     ]
 source-includes = [
@@ -47,11 +53,12 @@ purelib = [
 # Development workflow configuration
 
 [tool.pyright]
-diagnosticMode=false
-typeCheckingMode = "off"
 reportInvalidTypeForm = false
 reportMissingImports = false
 reportUnboundVariable = false
+reportAttributeAccessIssue = false
+reportWildcardImportFromLibrary = false
+ignore = [ "tests", "vendor" ]
 
 [tool.ruff.lint]
 select = ['E4', 'E7', 'E9', 'F', 'W291', 'W293']
@@ -75,4 +82,6 @@ dev = [
     "pytest>=7.2.0",
     "pytest-cov>=0.6",
     "sphinx>=7.0",
+    "pyright>=1.1.407",
+    "amaranth-stubs>=0.1.1",
 ]

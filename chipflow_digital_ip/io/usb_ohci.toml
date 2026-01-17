@@ -1,0 +1,99 @@
+name = 'UsbOhciPeripheral'
+
+[files]
+module = 'pythondata_misc_usb_ohci'
+
+[generate]
+parameters.nusb = 1
+parameters.dma_data_width = 32
+parameters.usb_clk_freq = 48e6
+
+generator = 'spinalhdl'
+
+[generate.spinalhdl]
+options = [ '--port-count {nusb}',
+            '--phy-frequency {usb_clk_freq:.0f}',
+            '--dma-width {dma_data_width}',
+          ]
+scala_class = 'spinal.lib.com.usb.ohci.UsbOhciWishbone'
+
+[clocks]
+usb = 'i_phy_clk'
+sys = 'i_ctrl_clk'
+
+[resets]
+usb = 'i_phy_reset'
+sys = 'i_ctrl_reset'
+
+[ports.wb_ctl]
+interface = 'amaranth_soc.wishbone.Interface'
+
+[ports.wb_ctl.params]
+data_width=32
+address_width=32
+addressing='word'
+ 
+[ports.wb_ctl.map]
+cyc =   'i_io_ctrl_CYC'
+stb =   'i_io_ctrl_STB'
+ack =   'o_io_ctrl_ACK'
+we =    'i_io_ctrl_WE'
+adr =   'i_io_ctrl_ADR'
+dat.r = 'o_io_ctrl_DAT_MISO'
+dat.w = 'i_io_ctrl_DAT_MOSI'
+sel =   'i_io_ctrl_SEL'
+
+[ports.wb_dma]
+interface = 'amaranth_soc.wishbone.Interface'
+
+[ports.wb_dma.params]
+data_width=32
+address_width='{dma_data_width}'
+addressing='word'
+ 
+[ports.wb_dma.map]
+cyc   = 'o_io_dma_CYC'
+stb   = 'o_io_dma_STB'
+ack   = 'i_io_dma_ACK'
+we    = 'o_io_dma_WE'
+adr   = 'o_io_dma_ADR'
+dat.r = 'i_io_dma_DAT_MISO'
+dat.w = 'o_io_dma_DAT_MOSI'
+sel   = 'o_io_dma_SEL'
+err   = 'i_io_dma_ERR'
+cti   = 'o_io_dma_CTI'
+bte   = 'o_io_dma_BTE'
+
+[ports.interrupt]
+interface = 'amaranth.lib.wiring.Out(1)'
+map = 'o_io_interrupt'
+
+[pins.usb]
+interface = 'chipflow_lib.platforms.I2CSignature'
+
+[pins.usb.vars]
+n = 'int'
+
+[pins.usb.map]
+dp.i  = 'i_io_usb_{n}_dp_read'
+dp.o  = 'o_io_usb_{n}_dp_write'       
+dp.oe = 'o_io_usb_{n}_dp_writeEnable' 
+dm.i  = 'i_io_usb_{n}_dm_read'        
+dm.o  = 'o_io_usb_{n}_dm_write'       
+dm.oe = 'o_io_usb_{n}_dm_writeEnable' 
+
+[drivers.uboot]
+CONFIG_USB_OHCI_NEW = true
+CONFIG_SYS_USB_OHCI_REGS_BASE = "{regs_base}"
+
+[drivers.zephyr]
+CONFIG_UHC_NXP_OHCI = true
+
+[drivers.dtsi]
+# reg, interrupts, enabled automatically added
+compatible = "nxp,uhc-ohci"
+maximum-speed = "full-speed"
+
+[drivers.raw]
+c_files = ['drivers/ohci_generic.c', 'drivers/ohci_hcd.c']
+h_files = ['ohci.h']
