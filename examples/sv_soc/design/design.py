@@ -19,6 +19,7 @@ from chipflow_digital_ip.base import SoCID
 from chipflow_digital_ip.memory import QSPIFlash
 from chipflow_digital_ip.io import GPIOPeripheral, UARTPeripheral
 from chipflow_digital_ip.io import load_wrapper_from_toml
+import chipflow_digital_ip.io
 
 from minerva.core import Minerva
 
@@ -33,9 +34,8 @@ from chipflow.platform import (
 
 __all__ = ["SVTimerSoC"]
 
-# Path to the RTL directory containing the SystemVerilog timer
-RTL_DIR = Path(__file__).parent / "rtl"
-TIMER_TOML = RTL_DIR / "wb_timer.toml"
+# Use the wb_timer from chipflow_digital_ip package
+TIMER_TOML = Path(chipflow_digital_ip.io.__file__).parent / "sv_timer" / "wb_timer.toml"
 
 
 class SVTimerSoC(wiring.Component):

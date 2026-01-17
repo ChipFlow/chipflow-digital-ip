@@ -12,10 +12,11 @@ The example creates a minimal SoC with:
 - **SRAM** - 1KB working memory
 - **GPIO** - 8-bit LED control
 - **UART** - Serial output at 115200 baud
-- **SystemVerilog Timer** - Programmable timer loaded via VerilogWrapper
+- **SystemVerilog Timer** - `wb_timer` from `chipflow_digital_ip.io.sv_timer`
 
-The timer peripheral (`wb_timer`) is written in SystemVerilog and integrated
-using the TOML-based `VerilogWrapper` configuration system.
+The timer peripheral is written in SystemVerilog and integrated using the
+TOML-based `VerilogWrapper` configuration system. This example uses the
+`wb_timer` that ships with `chipflow-digital-ip` rather than a local copy.
 
 ## Directory Structure
 
@@ -24,11 +25,6 @@ sv_soc/
 ├── chipflow.toml          # ChipFlow project configuration
 ├── design/
 │   ├── design.py          # SoC top-level design
-│   ├── rtl/               # SystemVerilog source files
-│   │   ├── wb_timer.sv    # Timer peripheral implementation
-│   │   ├── wb_timer.toml  # VerilogWrapper configuration
-│   │   └── drivers/
-│   │       └── wb_timer.h # C driver header
 │   ├── steps/
 │   │   └── board.py       # FPGA board build step
 │   ├── software/
@@ -40,7 +36,8 @@ sv_soc/
 
 ## Timer Peripheral
 
-The `wb_timer` is a 32-bit programmable timer with:
+The `wb_timer` from `chipflow_digital_ip.io.sv_timer` is a 32-bit programmable
+timer with:
 
 - **Wishbone B4 interface** - Standard bus protocol
 - **Prescaler** - 16-bit clock divider
@@ -56,44 +53,6 @@ The `wb_timer` is a 32-bit programmable timer with:
 | 0x08   | COUNTER | Current count (read) / Reload value (write)    |
 | 0x0C   | STATUS  | Status: [1] match, [0] irq_pending (W1C)       |
 
-## VerilogWrapper Configuration
-
-The timer is configured via `wb_timer.toml`:
-
-```toml
-name = 'wb_timer'
-
-[files]
-path = '.'
-
-[generate]
-generator = 'yosys_slang'
-
-[generate.yosys_slang]
-top_module = 'wb_timer'
-
-[clocks]
-sys = 'clk'
-
-[resets]
-sys = 'rst_n'
-
-# Wishbone bus interface (auto-mapped from signal patterns)
-[ports.bus]
-interface = 'amaranth_soc.wishbone.Signature'
-direction = 'in'
-
-[ports.bus.params]
-addr_width = 4
-data_width = 32
-granularity = 8
-
-# IRQ output pin
-[pins.irq]
-interface = 'amaranth.lib.wiring.Out(1)'
-map = 'o_irq'
-```
-
 ## Usage
 
 ### Prerequisites
@@ -108,7 +67,7 @@ map = 'o_irq'
 cd examples/sv_soc
 
 # Run the CXXRTL simulation test
-python design/tests/test_timer_sim.py
+pdm run python design/tests/test_timer_sim.py
 ```
 
 Expected output:
@@ -117,7 +76,7 @@ Expected output:
 SystemVerilog Timer CXXRTL Simulation Test
 ==================================================
 
-1. Loading timer from: .../rtl/wb_timer.toml
+1. Loading timer from: .../chipflow_digital_ip/io/sv_timer/wb_timer.toml
    Module: wb_timer
    Source files: ['wb_timer.sv']
 
@@ -149,11 +108,16 @@ chipflow build board
 ### Using in Your Own Design
 
 ```python
+from pathlib import Path
+import chipflow_digital_ip.io
 from chipflow_digital_ip.io import load_wrapper_from_toml
+
+# Get the timer TOML from the package
+timer_toml = Path(chipflow_digital_ip.io.__file__).parent / "sv_timer" / "wb_timer.toml"
 
 # Load the timer
 timer = load_wrapper_from_toml(
-    "path/to/wb_timer.toml",
+    timer_toml,
     generate_dest="build/timer_gen"
 )
 

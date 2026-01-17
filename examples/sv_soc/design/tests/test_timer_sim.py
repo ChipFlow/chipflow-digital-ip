@@ -6,28 +6,25 @@ This test demonstrates using VerilogWrapper.build_simulator() to create
 a CXXRTL simulator and test the timer peripheral.
 """
 
-import sys
 from pathlib import Path
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
+import chipflow_digital_ip.io
 from chipflow_digital_ip.io import load_wrapper_from_toml
 
 
 def main():
     """Run timer simulation test."""
-    # Paths
-    rtl_dir = Path(__file__).parent.parent / "rtl"
+    # Use the wb_timer from chipflow_digital_ip package
+    timer_toml = Path(chipflow_digital_ip.io.__file__).parent / "sv_timer" / "wb_timer.toml"
     build_dir = Path(__file__).parent.parent.parent / "build" / "timer_sim"
 
     print("SystemVerilog Timer CXXRTL Simulation Test")
     print("=" * 50)
 
     # Load the timer wrapper from TOML
-    print(f"\n1. Loading timer from: {rtl_dir / 'wb_timer.toml'}")
+    print(f"\n1. Loading timer from: {timer_toml}")
     wrapper = load_wrapper_from_toml(
-        rtl_dir / "wb_timer.toml",
+        timer_toml,
         generate_dest=build_dir / "gen"
     )
 
