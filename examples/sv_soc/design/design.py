@@ -23,7 +23,6 @@ from chipflow_digital_ip.io import load_wrapper_from_toml
 from minerva.core import Minerva
 
 from chipflow.platform import (
-    Sky130DriveMode,
     GPIOSignature,
     UARTSignature,
     QSPIFlashSignature,

@@ -37,7 +37,7 @@ def main():
     # Build the CXXRTL simulator
     print(f"\n2. Building CXXRTL simulator in: {build_dir}")
     sim = wrapper.build_simulator(build_dir)
-    print(f"   Simulator ready!")
+    print("   Simulator ready!")
 
     # Helper functions
     def reset():
