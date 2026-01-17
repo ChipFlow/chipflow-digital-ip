@@ -1,0 +1,18 @@
+# ChipFlow SoC Example with SystemVerilog Components
+# Demonstrates using VerilogWrapper to integrate SV peripherals
+
+[chipflow]
+project_name = "sv-soc-example"
+
+[chipflow.top]
+soc = "design.design:SVTimerSoC"
+
+[chipflow.steps]
+board = "design.steps.board:MyBoardStep"
+
+[chipflow.silicon]
+process = "sky130"
+package = "openframe"
+
+[chipflow.test]
+event_reference = "design/tests/events_reference.json"
