@@ -2,17 +2,26 @@
 The Amaranth SoC RFC UART from https://github.com/ChipFlow/chipflow-digital-ip
 """
 
+from typing import Generic, TypeVar
+
 from amaranth import *
 from amaranth.lib import stream, wiring
 from amaranth.lib.wiring import In, Out, flipped, connect
+from amaranth.hdl import ValueCastable
+
+from amaranth_types.types import ShapeLike
 
 from amaranth_soc import csr
 
 
 __all__ = ["RxPhySignature", "TxPhySignature", "RxPeripheral", "TxPeripheral", "Peripheral"]
 
+_T_ValueOrValueCastable = TypeVar("_T_ValueOrValueCastable", bound=Value | ValueCastable, covariant=True)
+_T_ShapeLike = TypeVar("_T_ShapeLike", bound=ShapeLike, covariant=True)
+_T_Symbol_ShapeLike = TypeVar("_T_Symbol_ShapeLike", bound=ShapeLike, covariant=True)
 
-class RxPhySignature(wiring.Signature):
+
+class RxPhySignature(wiring.Signature, Generic[_T_ShapeLike, _T_Symbol_ShapeLike]):
     """Receiver PHY signature.
 
     Parameters
@@ -38,7 +47,7 @@ class RxPhySignature(wiring.Signature):
         Receiver error flag. Pulsed for one clock cycle in case of an implementation-specific error
         (e.g. wrong parity bit).
     """
-    def __init__(self, phy_config_shape, symbol_shape):
+    def __init__(self, phy_config_shape: _T_ShapeLike, symbol_shape: _T_Symbol_ShapeLike):
         super().__init__({
             "rst":      Out(1),
             "config":   Out(phy_config_shape),
@@ -48,7 +57,7 @@ class RxPhySignature(wiring.Signature):
         })
 
 
-class TxPhySignature(wiring.Signature):
+class TxPhySignature(wiring.Signature, Generic[_T_ShapeLike, _T_Symbol_ShapeLike]):
     """Transmitter PHY signature.
 
     Parameters
@@ -68,7 +77,7 @@ class TxPhySignature(wiring.Signature):
     symbols : :py:`Out(stream.Signature(symbol_shape))`
         Symbol stream. The shape of its payload is given by the `symbol_shape` parameter.
     """
-    def __init__(self, phy_config_shape, symbol_shape):
+    def __init__(self, phy_config_shape: _T_ShapeLike, symbol_shape: _T_Symbol_ShapeLike):
         super().__init__({
             "rst":     Out(1),
             "config":  Out(phy_config_shape),
@@ -98,7 +107,7 @@ class _PhyConfigFieldAction(csr.FieldAction):
         return m
 
 
-class RxPeripheral(wiring.Component):
+class RxPeripheral(wiring.Component, Generic[_T_ShapeLike, _T_ValueOrValueCastable, _T_Symbol_ShapeLike]):
     class Config(csr.Register, access="rw"):
         """Peripheral configuration register.
 
@@ -141,7 +150,7 @@ class RxPeripheral(wiring.Component):
         phy_config_init : :class:`int`
             Initial value of the PHY configuration word.
         """
-        def __init__(self, phy_config_shape, phy_config_init):
+        def __init__(self, phy_config_shape: _T_ShapeLike, phy_config_init: _T_ValueOrValueCastable):
             super().__init__(csr.Field(_PhyConfigFieldAction, phy_config_shape,
                                        init=phy_config_init))
 
@@ -199,7 +208,7 @@ class RxPeripheral(wiring.Component):
         symbol_shape : :ref:`shape-like <lang-shapelike>`
             Shape of a symbol.
         """
-        def __init__(self, symbol_shape):
+        def __init__(self, symbol_shape: _T_Symbol_ShapeLike):
             super().__init__(csr.Field(csr.action.R, symbol_shape))
 
     """UART receiver peripheral.
@@ -224,8 +233,8 @@ class RxPeripheral(wiring.Component):
     phy : :py:`Out(RxPhySignature(phy_config_shape, symbol_shape))`
         Interface between the peripheral and its PHY.
     """
-    def __init__(self, *, addr_width, data_width, phy_config_shape=unsigned(16),
-                 phy_config_init=0, symbol_shape=unsigned(8)):
+    def __init__(self, *, addr_width, data_width, phy_config_shape:_T_ShapeLike = unsigned(16),
+                 phy_config_init: _T_ValueOrValueCastable = Value.cast(0), symbol_shape: _T_Symbol_ShapeLike = unsigned(8)):
         regs = csr.Builder(addr_width=addr_width, data_width=data_width)
 
         self._config     = regs.add("Config",    self.Config())
@@ -298,7 +307,7 @@ class RxPeripheral(wiring.Component):
         return m
 
 
-class TxPeripheral(wiring.Component):
+class TxPeripheral(wiring.Component, Generic[_T_ShapeLike, _T_Symbol_ShapeLike, _T_ValueOrValueCastable]):
     class Config(csr.Register, access="rw"):
         """Peripheral configuration register.
 
@@ -341,7 +350,7 @@ class TxPeripheral(wiring.Component):
         phy_config_init : :class:`int`
             Initial value of the PHY configuration word.
         """
-        def __init__(self, phy_config_shape, phy_config_init):
+        def __init__(self, phy_config_shape: _T_ShapeLike, phy_config_init: _T_ValueOrValueCastable):
             super().__init__(csr.Field(_PhyConfigFieldAction, phy_config_shape,
                                        init=phy_config_init))
 
@@ -391,7 +400,7 @@ class TxPeripheral(wiring.Component):
         symbol_shape : :ref:`shape-like <lang-shapelike>`
             Shape of a symbol.
         """
-        def __init__(self, symbol_shape):
+        def __init__(self, symbol_shape: _T_Symbol_ShapeLike):
             super().__init__(csr.Field(csr.action.W, symbol_shape))
 
     """UART transmitter peripheral.
@@ -416,8 +425,8 @@ class TxPeripheral(wiring.Component):
     phy : :py:`Out(TxPhySignature(phy_config_shape, symbol_shape))`
         Interface between the peripheral and its PHY.
     """
-    def __init__(self, *, addr_width, data_width=8, phy_config_shape=unsigned(16),
-                 phy_config_init=0, symbol_shape=unsigned(8)):
+    def __init__(self, *, addr_width, data_width=8, phy_config_shape: _T_ShapeLike = unsigned(16),
+                 phy_config_init: _T_ValueOrValueCastable = Value.cast(0), symbol_shape: _T_Symbol_ShapeLike = unsigned(8)):
         regs = csr.Builder(addr_width=addr_width, data_width=data_width)
 
         self._config     = regs.add("Config",    self.Config())
@@ -487,7 +496,7 @@ class TxPeripheral(wiring.Component):
         return m
 
 
-class Peripheral(wiring.Component):
+class Peripheral(wiring.Component, Generic[_T_ShapeLike, _T_Symbol_ShapeLike, _T_ValueOrValueCastable]):
     """UART transceiver peripheral.
 
     This peripheral is composed of two subordinate peripherals. A :class:`RxPeripheral` occupies
@@ -522,8 +531,8 @@ class Peripheral(wiring.Component):
     :exc:`TypeError`
         If ``addr_width`` is not a positive integer.
     """
-    def __init__(self, *, addr_width, data_width=8, phy_config_shape=unsigned(16),
-                 phy_config_init=0, symbol_shape=unsigned(8)):
+    def __init__(self, *, addr_width, data_width=8, phy_config_shape: _T_ShapeLike = unsigned(16),
+                 phy_config_init: _T_ValueOrValueCastable = Value.cast(0), symbol_shape: _T_Symbol_ShapeLike = unsigned(8)):
         if not isinstance(addr_width, int) or addr_width <= 0:
             raise TypeError(f"Address width must be a positive integer, not {addr_width!r}")
 

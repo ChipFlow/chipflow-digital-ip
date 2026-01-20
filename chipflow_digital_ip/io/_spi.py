@@ -1,4 +1,4 @@
-from amaranth import Module, Signal, Cat, C, unsigned
+from amaranth import *
 from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out, connect, flipped
 
