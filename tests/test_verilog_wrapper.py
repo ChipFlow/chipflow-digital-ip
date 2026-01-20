@@ -11,7 +11,7 @@ from amaranth import *
 from amaranth.hdl import UnusedElaboratable
 
 from chipflow import ChipFlowError
-from chipflow_digital_ip.io._verilog_wrapper import (
+from chipflow.rtl.wrapper import (
     DriverConfig,
     ExternalWrapConfig,
     Files,
@@ -19,7 +19,7 @@ from chipflow_digital_ip.io._verilog_wrapper import (
     GenerateSV2V,
     Generators,
     Port,
-    VerilogWrapper,
+    RTLWrapper as VerilogWrapper,
     _flatten_port_map,
     _generate_auto_map,
     _infer_auto_map,

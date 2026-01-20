@@ -18,7 +18,7 @@ from amaranth_soc.wishbone.sram import WishboneSRAM
 from chipflow_digital_ip.base import SoCID
 from chipflow_digital_ip.memory import QSPIFlash
 from chipflow_digital_ip.io import GPIOPeripheral, UARTPeripheral
-from chipflow_digital_ip.io import load_wrapper_from_toml
+from chipflow.rtl import load_wrapper_from_toml
 import chipflow_digital_ip.io
 
 from minerva.core import Minerva

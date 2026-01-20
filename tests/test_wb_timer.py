@@ -22,7 +22,7 @@ from pathlib import Path
 from amaranth import Module
 from amaranth.hdl import UnusedElaboratable
 
-from chipflow_digital_ip.io import load_wrapper_from_toml
+from chipflow.rtl import load_wrapper_from_toml
 
 
 # Path to the wb_timer TOML configuration

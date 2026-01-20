@@ -17,7 +17,7 @@ Usage:
 
 from pathlib import Path
 
-from chipflow_digital_ip.io import load_wrapper_from_toml
+from chipflow.rtl import load_wrapper_from_toml
 
 
 # Register addresses (word-addressed)

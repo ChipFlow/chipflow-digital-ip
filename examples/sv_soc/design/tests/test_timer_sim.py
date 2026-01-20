@@ -9,7 +9,7 @@ a CXXRTL simulator and test the timer peripheral.
 from pathlib import Path
 
 import chipflow_digital_ip.io
-from chipflow_digital_ip.io import load_wrapper_from_toml
+from chipflow.rtl import load_wrapper_from_toml
 
 
 def main():
