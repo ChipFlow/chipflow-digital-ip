@@ -72,7 +72,7 @@ class WbTimerConfigTestCase(unittest.TestCase):
         # It will fail at Verilog file loading if sv2v is not installed
         # but the config parsing should succeed
         import tomli
-        from chipflow_digital_ip.io._verilog_wrapper import ExternalWrapConfig
+        from chipflow.rtl.wrapper import ExternalWrapConfig
 
         with open(WB_TIMER_TOML, "rb") as f:
             raw_config = tomli.load(f)
@@ -88,7 +88,7 @@ class WbTimerConfigTestCase(unittest.TestCase):
     def test_driver_config(self):
         """Test that driver configuration is present."""
         import tomli
-        from chipflow_digital_ip.io._verilog_wrapper import ExternalWrapConfig
+        from chipflow.rtl.wrapper import ExternalWrapConfig
 
         with open(WB_TIMER_TOML, "rb") as f:
             raw_config = tomli.load(f)
